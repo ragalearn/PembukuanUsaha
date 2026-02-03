@@ -1,0 +1,59 @@
+[versions]
+agp = "8.13.2"
+
+# ===== TESTING =====
+junit = "4.13.2"
+junitVersion = "1.1.5"
+espressoCore = "3.5.1"
+
+# ===== ANDROIDX & UI =====
+appcompat = "1.6.1"
+material = "1.11.0"
+activity = "1.8.2"
+constraintlayout = "2.1.4"
+cardview = "1.0.0"
+core = "1.12.0"
+
+# ===== CHART =====
+mpchart = "v3.1.0"
+
+# ===== EXPORT =====
+poi = "5.2.3"
+
+# ===== FIREBASE =====
+firebase-bom = "32.7.4"
+firebase-auth = "22.3.1"
+firebase-firestore = "24.10.3"
+google-services = "4.4.2"
+
+
+[libraries]
+# ===== TESTING =====
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
+# ===== ANDROIDX =====
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
+core = { group = "androidx.core", name = "core", version.ref = "core" }
+core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core" }
+
+# ===== CHART =====
+mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpchart" }
+
+# ===== EXPORT =====
+poi = { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi" }
+
+# ===== FIREBASE =====
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebase-firestore" }
+
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }

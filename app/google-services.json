@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "735586959525",
+    "project_id": "pembukuanusaha-6ddd8",
+    "storage_bucket": "pembukuanusaha-6ddd8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:735586959525:android:bcab8b26abb51e3ae3cd4c",
+        "android_client_info": {
+          "package_name": "com.example.pembukuanusaha"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlpkyVfQVtsjdPwQ797pOhSZEccb9x_s8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

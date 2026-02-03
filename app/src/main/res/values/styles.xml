@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="TextTitle">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/textTitle</item>
+    </style>
+
+    <style name="TextSubtitle">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/textSubtitle</item>
+    </style>
+
+</resources>

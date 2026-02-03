@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- =====================
+         BRAND / THEME
+         ===================== -->
+    <color name="colorPrimary">#4CAF50</color>        <!-- Green -->
+    <color name="colorPrimaryDark">#388E3C</color>    <!-- Dark Green -->
+    <color name="colorAccent">#FFC107</color>         <!-- Amber -->
+
+    <!-- =====================
+         BACKGROUND
+         ===================== -->
+    <color name="bgMain">#F6F7FB</color>               <!-- App background -->
+    <color name="bgCard">#FFFFFF</color>               <!-- Card / surface -->
+
+    <!-- =====================
+         TEXT
+         ===================== -->
+    <color name="textTitle">#111111</color>            <!-- Title -->
+    <color name="textSubtitle">#666666</color>         <!-- Subtitle -->
+    <color name="textSuccess">#2E7D32</color>          <!-- Success -->
+    <color name="textDanger">#D32F2F</color>           <!-- Error / Danger -->
+
+    <!-- =====================
+         BASIC (AMAN DIPAKAI)
+         ===================== -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- =====================
+         THEME UTAMA APLIKASI
+         ===================== -->
+    <style name="Theme.PembukuanUsaha"
+        parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+        <!-- BRAND COLORS -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryDark</item>
+        <item name="colorSecondary">@color/colorAccent</item>
+
+        <!-- STATUS BAR -->
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+    </style>
+
+</resources>
