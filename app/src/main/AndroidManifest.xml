@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.pembukuanusaha">
 
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -10,9 +14,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PembukuanUsaha">
 
-        <!-- ===================== -->
-        <!-- LOGIN (LAUNCHER) -->
-        <!-- ===================== -->
         <activity
             android:name=".activity.LoginActivity"
             android:exported="true">
@@ -22,67 +23,21 @@
             </intent-filter>
         </activity>
 
-        <!-- ===================== -->
-        <!-- MAIN DASHBOARD -->
-        <!-- ===================== -->
         <activity
-            android:name=".activity.MainActivity"
+            android:name=".activity.RegisterActivity"
             android:exported="false" />
 
-        <!-- ===================== -->
-        <!-- TRANSAKSI -->
-        <!-- ===================== -->
-        <activity
-            android:name=".activity.TambahTransaksiActivity"
-            android:exported="false" />
-        <activity
-            android:name=".activity.DaftarTransaksiActivity"
-            android:exported="false" />
-
-        <!-- ===================== -->
-        <!-- PRODUK -->
-        <!-- ===================== -->
-        <activity
-            android:name=".activity.TambahProdukActivity"
-            android:exported="false" />
-        <activity
-            android:name=".activity.DaftarProdukActivity"
-            android:exported="false" />
-
-        <!-- ===================== -->
-        <!-- AYO BELANJA -->
-        <!-- ===================== -->
-        <activity
-            android:name=".activity.AyoBelanjaActivity"
-            android:exported="false" />
-
-        <!-- ===================== -->
-        <!-- INSIGHT -->
-        <!-- ===================== -->
-        <activity
-            android:name=".activity.InsightActivity"
-            android:exported="false" />
-
-        <!-- ===================== -->
-        <!-- GRAFIK -->
-        <!-- ===================== -->
-        <activity
-            android:name=".activity.GrafikActivity"
-            android:exported="false" />
-
-        <!-- ===================== -->
-        <!-- EXPORT -->
-        <!-- ===================== -->
-        <activity
-            android:name=".activity.ExportActivity"
-            android:exported="false" />
-
-        <!-- ===================== -->
-        <!-- BACKUP & RESTORE -->
-        <!-- ===================== -->
-        <activity
-            android:name=".activity.BackupRestoreActivity"
-            android:exported="false" />
+        <activity android:name=".activity.MainActivity" android:exported="false" />
+        <activity android:name=".activity.TambahTransaksiActivity" android:exported="false" />
+        <activity android:name=".activity.DaftarTransaksiActivity" android:exported="false" />
+        <activity android:name=".activity.TambahPengeluaranActivity" android:exported="false" />
+        <activity android:name=".activity.TambahProdukActivity" android:exported="false" />
+        <activity android:name=".activity.DaftarProdukActivity" android:exported="false" />
+        <activity android:name=".activity.AyoBelanjaActivity" android:exported="false" />
+        <activity android:name=".activity.InsightActivity" android:exported="false" />
+        <activity android:name=".activity.GrafikActivity" android:exported="false" />
+        <activity android:name=".activity.ExportActivity" android:exported="false" />
+        <activity android:name=".activity.BackupRestoreActivity" android:exported="false" />
 
     </application>
 

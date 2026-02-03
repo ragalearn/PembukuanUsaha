@@ -1,68 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="6dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:cardBackgroundColor="@android:color/white">
+    app:cardElevation="3dp"
+    app:cardBackgroundColor="@color/white">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/txtNamaProduk"
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/ic_launcher_background"
+            android:backgroundTint="#E3F2FD">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_shopping"
+                app:tint="#1976D2"
+                android:layout_gravity="center"/>
+        </FrameLayout>
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Kopi Susu Gula Aren"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#222222"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/txtLaba"
-            android:layout_marginEnd="8dp"/>
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
 
-        <TextView
-            android:id="@+id/txtJumlah"
+            <TextView
+                android:id="@+id/txtNamaProduk"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nama Produk"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/textTitle"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:src="@drawable/ic_list"
+                    app:tint="@color/textSubtitle"
+                    android:layout_marginEnd="4dp"/>
+
+                <TextView
+                    android:id="@+id/txtTanggal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2023-10-25"
+                    android:textSize="12sp"
+                    android:textColor="@color/textSubtitle"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="2 item"
-            android:textSize="14sp"
-            android:textColor="#757575"
-            android:layout_marginTop="4dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/txtNamaProduk"/>
+            android:orientation="vertical"
+            android:gravity="end">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Keuntungan"
-            android:textSize="10sp"
-            android:textColor="#4CAF50"
-            android:background="#E8F5E9"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="2dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            <TextView
+                android:id="@+id/txtTotal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rp 50.000"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/green_success"/>
 
-        <TextView
-            android:id="@+id/txtLaba"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="+Rp 15.000"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:textColor="#2E7D32"
-            android:layout_marginTop="18dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            <TextView
+                android:id="@+id/txtJumlah"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="x 2 pcs"
+                android:textSize="11sp"
+                android:textColor="@color/textSubtitle"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/ic_launcher_background"
+                android:backgroundTint="#F5F5F5"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp"/>
+        </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 </androidx.cardview.widget.CardView>

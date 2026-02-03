@@ -1,11 +1,12 @@
 package com.example.pembukuanusaha.activity;
 
+import android.app.DatePickerDialog;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,51 +19,74 @@ import com.google.android.material.snackbar.Snackbar;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
 public class TambahTransaksiActivity extends AppCompatActivity {
 
+    // VIEW (Sesuai ID di XML Baru)
     Spinner spinnerProduk;
-    EditText edtJumlah;
-    MaterialButton btnHitung;
-    TextView txtHasil;
+    EditText edtJumlah, edtTanggal; // Tambahan edtTanggal untuk DatePicker
+    MaterialButton btnSimpan;       // Dulu btnHitung, sekarang btnSimpan agar konsisten
 
+    // DATA
     DatabaseHelper db;
     List<Produk> produkList = new ArrayList<>();
+    Calendar calendar = Calendar.getInstance(); // Untuk Kalender
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tambah_transaksi);
 
+        // =====================
+        // INIT VIEW
+        // =====================
         spinnerProduk = findViewById(R.id.spinnerProduk);
         edtJumlah     = findViewById(R.id.edtJumlah);
-        btnHitung     = findViewById(R.id.btnHitung);
-        txtHasil      = findViewById(R.id.txtHasil);
+        edtTanggal    = findViewById(R.id.edtTanggal);
+        btnSimpan     = findViewById(R.id.btnSimpan);
 
         db = new DatabaseHelper(this);
+
+        // 1. Setup Tanggal Default (Hari Ini)
+        updateLabelTanggal();
+
+        // 2. Listener Klik Tanggal (Muncul Kalender)
+        edtTanggal.setOnClickListener(v -> showDatePicker());
+
+        // 3. Load Produk
         loadProduk();
-        btnHitung.setOnClickListener(v -> simpanTransaksi());
+
+        // 4. Aksi Simpan
+        btnSimpan.setOnClickListener(v -> simpanTransaksi());
     }
 
     private void loadProduk() {
-        Cursor c = db.getAllProduk();
-        List<String> namaProduk = new ArrayList<>();
         produkList.clear();
+        List<String> namaProduk = new ArrayList<>();
 
+        Cursor c = db.getAllProduk();
         if (c != null) {
             while (c.moveToNext()) {
-                Produk p = new Produk(c.getInt(0), c.getString(1), c.getInt(2), c.getInt(3), c.getInt(4));
+                // Pastikan urutan kolom sesuai DB kamu: ID, Nama, Modal, Jual, Stok
+                Produk p = new Produk(
+                        c.getInt(0),
+                        c.getString(1),
+                        c.getInt(2),
+                        c.getInt(3),
+                        c.getInt(4)
+                );
                 produkList.add(p);
-                namaProduk.add(p.getNama() + " (Stok: " + p.getStok() + ")"); // Tampilkan sisa stok di spinner
+                // Menampilkan stok di spinner (Fitur lama kamu yang bagus)
+                namaProduk.add(p.getNama() + " (Sisa: " + p.getStok() + ")");
             }
             c.close();
         }
 
         if (produkList.isEmpty()) {
-            Toast.makeText(this, "Belum ada produk. Tambahkan dulu!", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Stok kosong! Tambah produk dulu.", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
@@ -72,10 +96,30 @@ public class TambahTransaksiActivity extends AppCompatActivity {
         spinnerProduk.setAdapter(adapter);
     }
 
+    // Tampilkan Dialog Kalender
+    private void showDatePicker() {
+        new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+            calendar.set(Calendar.YEAR, year);
+            calendar.set(Calendar.MONTH, month);
+            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+            updateLabelTanggal();
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
+    // Update Text di EditText Tanggal
+    private void updateLabelTanggal() {
+        String format = "yyyy-MM-dd";
+        SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.getDefault());
+        edtTanggal.setText(sdf.format(calendar.getTime()));
+    }
+
     private void simpanTransaksi() {
         String jumlahStr = edtJumlah.getText().toString().trim();
-        if (jumlahStr.isEmpty()) {
-            edtJumlah.setError("Isi jumlah!");
+        String tanggal   = edtTanggal.getText().toString().trim();
+
+        // === VALIDASI INPUT ===
+        if (TextUtils.isEmpty(jumlahStr)) {
+            edtJumlah.setError("Isi jumlah terjual");
             return;
         }
 
@@ -85,34 +129,41 @@ public class TambahTransaksiActivity extends AppCompatActivity {
             return;
         }
 
+        // Ambil Produk Terpilih
+        if (produkList.isEmpty()) return;
         Produk produk = produkList.get(spinnerProduk.getSelectedItemPosition());
 
-        // CEK STOK
+        // === CEK STOK (Logika Lamamu) ===
         if (jumlah > produk.getStok()) {
-            Snackbar.make(btnHitung, "Stok tidak cukup! Sisa: " + produk.getStok(), Snackbar.LENGTH_LONG)
+            Snackbar.make(btnSimpan, "Stok tidak cukup! Sisa: " + produk.getStok(), Snackbar.LENGTH_LONG)
                     .setBackgroundTint(getResources().getColor(android.R.color.holo_red_dark))
                     .show();
             return;
         }
 
-        // HITUNG DATA
+        // === HITUNG LABA (Logika Lamamu) ===
         int hargaJual  = produk.getHargaJual();
         int hargaModal = produk.getHargaModal();
         int laba       = (hargaJual - hargaModal) * jumlah;
-        String tanggal = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-        // SIMPAN TRANSAKSI
+        // === SIMPAN KE DATABASE ===
+        // Menggunakan method insertTransaksi milikmu
         boolean sukses = db.insertTransaksi(produk.getNama(), hargaJual, hargaModal, jumlah, laba, tanggal);
 
         if (sukses) {
-            // 🔥 UPDATE STOK BARU (KURANGI STOK)
+            // 🔥 UPDATE STOK (Logika Lamamu: Kurangi stok manual)
             int stokBaru = produk.getStok() - jumlah;
             db.updateStokProduk(produk.getId(), stokBaru);
 
-            Toast.makeText(this, "Transaksi Sukses! Laba: Rp " + laba, Toast.LENGTH_SHORT).show();
-            finish();
+            // Feedback Sukses (Hijau)
+            Snackbar.make(btnSimpan, "Transaksi Sukses! Laba: Rp " + laba, Snackbar.LENGTH_LONG)
+                    .setBackgroundTint(getResources().getColor(R.color.colorPrimary))
+                    .show();
+
+            // Delay sedikit biar user lihat pesan sukses sebelum tutup
+            btnSimpan.postDelayed(this::finish, 1500);
         } else {
-            Toast.makeText(this, "Gagal menyimpan", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Gagal menyimpan transaksi", Toast.LENGTH_SHORT).show();
         }
     }
 }

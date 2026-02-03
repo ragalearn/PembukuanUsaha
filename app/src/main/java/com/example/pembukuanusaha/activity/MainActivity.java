@@ -3,9 +3,12 @@ package com.example.pembukuanusaha.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView; // PENTING: Import CardView
 
 import com.example.pembukuanusaha.R;
 import com.example.pembukuanusaha.database.DatabaseHelper;
@@ -22,24 +25,13 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    // =====================
-    // VIEW
-    // =====================
     TextView txtGreeting, txtTanggal, txtOmzet, txtLaba;
+    ImageView btnKeluar;
 
-    // Perbaikan: Menggunakan tipe View agar tidak terjadi ClassCastException (CardView vs Button)
-    View btnTambahTransaksi,
-            btnLihatTransaksi,
-            btnProduk,
-            btnAyoBelanja,
-            btnInsight,
-            btnGrafik,
-            btnExport,
-            btnBackupRestore;
+    // UBAH TIPE VARIABEL DARI MaterialButton KE CardView
+    CardView btnTambahTransaksi, btnPengeluaran, btnLihatTransaksi, btnProduk,
+            btnAyoBelanja, btnInsight, btnGrafik, btnExport, btnBackupRestore;
 
-    // =====================
-    // UTIL
-    // =====================
     DatabaseHelper db;
     SessionManager session;
 
@@ -47,9 +39,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // =====================
-        // 🔐 CEK LOGIN
-        // =====================
         FirebaseAuth auth = FirebaseAuth.getInstance();
         if (auth.getCurrentUser() == null) {
             startActivity(new Intent(this, LoginActivity.class));
@@ -59,21 +48,19 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
-        // =====================
-        // SESSION
-        // =====================
         session = new SessionManager(this);
+        db = new DatabaseHelper(this);
 
-        // =====================
-        // INIT VIEW
-        // =====================
+        // Init View
         txtGreeting = findViewById(R.id.txtGreeting);
         txtTanggal  = findViewById(R.id.txtTanggal);
         txtOmzet    = findViewById(R.id.txtOmzet);
         txtLaba     = findViewById(R.id.txtLaba);
+        btnKeluar   = findViewById(R.id.btnKeluar);
 
-        // Menghubungkan View (ID ini di XML mungkin berupa CardView atau Button)
+        // Init Tombol (Sekarang CardView)
         btnTambahTransaksi = findViewById(R.id.btnTambahTransaksi);
+        btnPengeluaran     = findViewById(R.id.btnPengeluaran);
         btnLihatTransaksi  = findViewById(R.id.btnLihatTransaksi);
         btnProduk          = findViewById(R.id.btnProduk);
         btnAyoBelanja      = findViewById(R.id.btnAyoBelanja);
@@ -82,81 +69,68 @@ public class MainActivity extends AppCompatActivity {
         btnExport          = findViewById(R.id.btnExport);
         btnBackupRestore   = findViewById(R.id.btnBackupRestore);
 
-        // =====================
-        // DATABASE
-        // =====================
-        db = new DatabaseHelper(this);
-
-        // =====================
-        // HEADER
-        // =====================
         setGreetingAndDate();
         updateDashboard();
 
-        // =====================
-        // 🔐 ROLE-BASED UI
-        // =====================
+        // 🔐 ROLE PROTECTION
         if (!session.isAdmin()) {
             if (btnProduk != null) btnProduk.setVisibility(View.GONE);
             if (btnAyoBelanja != null) btnAyoBelanja.setVisibility(View.GONE);
             if (btnBackupRestore != null) btnBackupRestore.setVisibility(View.GONE);
         }
 
-        // =====================
-        // NAVIGASI
-        // =====================
-        if (btnTambahTransaksi != null)
-            btnTambahTransaksi.setOnClickListener(v -> startActivity(new Intent(this, TambahTransaksiActivity.class)));
-
-        if (btnLihatTransaksi != null)
-            btnLihatTransaksi.setOnClickListener(v -> startActivity(new Intent(this, DaftarTransaksiActivity.class)));
-
-        if (btnProduk != null)
-            btnProduk.setOnClickListener(v -> {
-                if (session.isAdmin()) {
-                    startActivity(new Intent(this, DaftarProdukActivity.class));
-                } else {
-                    Snackbar.make(v, "Akses ditolak. Khusus Admin.", Snackbar.LENGTH_LONG).show();
-                }
-            });
-
-        if (btnAyoBelanja != null)
-            btnAyoBelanja.setOnClickListener(v -> {
-                if (session.isAdmin()) {
-                    startActivity(new Intent(this, AyoBelanjaActivity.class));
-                } else {
-                    Snackbar.make(v, "Akses ditolak. Khusus Admin.", Snackbar.LENGTH_LONG).show();
-                }
-            });
-
-        if (btnInsight != null)
-            btnInsight.setOnClickListener(v -> startActivity(new Intent(this, InsightActivity.class)));
-
-        if (btnGrafik != null)
-            btnGrafik.setOnClickListener(v -> startActivity(new Intent(this, GrafikActivity.class)));
-
-        if (btnExport != null)
-            btnExport.setOnClickListener(v -> startActivity(new Intent(this, ExportActivity.class)));
-
-        if (btnBackupRestore != null)
-            btnBackupRestore.setOnClickListener(v -> {
-                if (session.isAdmin()) {
-                    startActivity(new Intent(this, BackupRestoreActivity.class));
-                } else {
-                    Snackbar.make(v, "Akses ditolak. Khusus Admin.", Snackbar.LENGTH_LONG).show();
-                }
-            });
-
-        // =====================
-        // ✨ ANIMASI
-        // =====================
+        setupButtons();
         animateDashboard();
+    }
+
+    private void setupButtons() {
+        btnTambahTransaksi.setOnClickListener(v -> startActivity(new Intent(this, TambahTransaksiActivity.class)));
+        btnPengeluaran.setOnClickListener(v -> startActivity(new Intent(this, TambahPengeluaranActivity.class)));
+        btnLihatTransaksi.setOnClickListener(v -> startActivity(new Intent(this, DaftarTransaksiActivity.class)));
+
+        btnProduk.setOnClickListener(v -> {
+            if (session.isAdmin()) startActivity(new Intent(this, DaftarProdukActivity.class));
+            else showAccessDenied(v);
+        });
+
+        btnAyoBelanja.setOnClickListener(v -> {
+            if (session.isAdmin()) startActivity(new Intent(this, AyoBelanjaActivity.class));
+            else showAccessDenied(v);
+        });
+
+        btnInsight.setOnClickListener(v -> startActivity(new Intent(this, InsightActivity.class)));
+        btnGrafik.setOnClickListener(v -> startActivity(new Intent(this, GrafikActivity.class)));
+        btnExport.setOnClickListener(v -> startActivity(new Intent(this, ExportActivity.class)));
+
+        btnBackupRestore.setOnClickListener(v -> {
+            if (session.isAdmin()) startActivity(new Intent(this, BackupRestoreActivity.class));
+            else showAccessDenied(v);
+        });
+
+        btnKeluar.setOnClickListener(v -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("Logout")
+                    .setMessage("Yakin ingin keluar dari akun?")
+                    .setPositiveButton("Ya", (dialog, which) -> {
+                        FirebaseAuth.getInstance().signOut();
+                        session.logoutUser();
+                        finish();
+                    })
+                    .setNegativeButton("Batal", null)
+                    .show();
+        });
+    }
+
+    private void showAccessDenied(View v) {
+        Snackbar.make(v, "Akses ditolak. Khusus Admin.", Snackbar.LENGTH_SHORT).show();
     }
 
     private void updateDashboard() {
         if (db != null) {
-            txtOmzet.setText(RupiahFormatter.format(db.getTotalOmzet()));
-            txtLaba.setText(RupiahFormatter.format(db.getTotalLaba()));
+            int omzet = db.getTotalOmzet();
+            int laba = db.getTotalLaba();
+            txtOmzet.setText(RupiahFormatter.format(omzet));
+            txtLaba.setText(RupiahFormatter.format(laba));
         }
     }
 
@@ -168,7 +142,11 @@ public class MainActivity extends AppCompatActivity {
         else if (hour >= 15 && hour < 18) greeting = "Selamat Sore 👋";
         else greeting = "Selamat Malam 👋";
 
-        txtGreeting.setText(greeting);
+        String nama = session.getUserDetails().get(SessionManager.KEY_EMAIL);
+        if (nama != null && nama.contains("@")) nama = nama.split("@")[0];
+
+        txtGreeting.setText(greeting + (nama != null ? "\n" + nama : ""));
+
         String tanggal = new SimpleDateFormat("EEEE, dd MMMM yyyy", new Locale("id", "ID")).format(new Date());
         txtTanggal.setText(tanggal);
     }
@@ -179,10 +157,9 @@ public class MainActivity extends AppCompatActivity {
         txtGreeting.animate().alpha(1f).setDuration(600).start();
         txtTanggal.animate().alpha(1f).setStartDelay(200).setDuration(600).start();
 
-        // Menggunakan array View agar kompatibel dengan CardView maupun Button
         View[] buttons = {
-                btnTambahTransaksi, btnLihatTransaksi, btnProduk, btnAyoBelanja,
-                btnInsight, btnGrafik, btnExport, btnBackupRestore
+                btnTambahTransaksi, btnPengeluaran, btnLihatTransaksi, btnProduk,
+                btnAyoBelanja, btnInsight, btnGrafik, btnExport, btnBackupRestore
         };
 
         int delay = 300;
@@ -200,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
                     .setStartDelay(delay)
                     .setDuration(300)
                     .start();
-            delay += 100;
+            delay += 50;
         }
     }
 
@@ -208,7 +185,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         updateDashboard();
-        // Memanggil Helper Sinkronisasi yang sudah kita perbaiki sebelumnya
         FirestoreSyncHelper.syncTransaksi(this);
     }
 }

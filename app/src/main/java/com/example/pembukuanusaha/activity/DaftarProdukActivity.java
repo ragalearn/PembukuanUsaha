@@ -5,9 +5,12 @@ import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
-import android.widget.LinearLayout; // Pastikan import ini ada
-import android.widget.ProgressBar;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -26,124 +29,126 @@ import java.util.List;
 public class DaftarProdukActivity extends AppCompatActivity {
 
     // =====================
-    // VIEW
+    // VIEW (Sesuai XML Baru)
     // =====================
     RecyclerView recyclerProduk;
-    LinearLayout txtEmptyProduk; // UBAH KE LINEARLAYOUT (Bukan TextView lagi)
-    ProgressBar progressLoading;
-    FloatingActionButton fabTambahProduk;
+    LinearLayout layoutEmpty; // Dulu TextView, sekarang Layout agar lebih cantik
+    FloatingActionButton fabTambah;
+    EditText edtCari; // FITUR BARU: Kolom Pencarian
 
     // =====================
     // DATA
     // =====================
-    List<Produk> produkList;
-    ProdukAdapter adapter;
     DatabaseHelper db;
+    List<Produk> produkListMaster = new ArrayList<>(); // Menyimpan SEMUA data
+    List<Produk> produkListDisplay = new ArrayList<>(); // Menyimpan data yang DITAMPILKAN (Hasil Filter)
+    ProdukAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         // =====================
-        // 🔐 ROLE PROTECTION (ANTI BYPASS)
+        // 🔐 ROLE PROTECTION (Kode Lamamu)
         // =====================
         SessionManager session = new SessionManager(this);
-        // Jika bukan admin (misal kasir), tetap boleh lihat produk?
-        // Kalau mau dibatasi hanya Admin, biarkan kode ini.
-        // Kalau Kasir boleh lihat, hapus blok if ini.
-        /* if (!session.isAdmin()) {
+        if (!session.isAdmin()) {
+            Toast.makeText(this, "Akses Ditolak: Khusus Admin", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
-        */
 
         setContentView(R.layout.activity_daftar_produk);
 
         // =====================
         // INIT VIEW
         // =====================
-        recyclerProduk   = findViewById(R.id.recyclerProduk);
-        txtEmptyProduk   = findViewById(R.id.txtEmptyProduk); // Sekarang aman karena tipe sudah cocok
-        progressLoading  = findViewById(R.id.progressLoading);
-        fabTambahProduk  = findViewById(R.id.fabTambahProduk);
+        recyclerProduk = findViewById(R.id.recyclerProduk);
+        layoutEmpty    = findViewById(R.id.layoutEmpty);
+        fabTambah      = findViewById(R.id.fabTambah);
+        edtCari        = findViewById(R.id.edtCari);
 
         recyclerProduk.setLayoutManager(new LinearLayoutManager(this));
-
-        // =====================
-        // DATABASE
-        // =====================
         db = new DatabaseHelper(this);
 
-        produkList = new ArrayList<>();
-        adapter = new ProdukAdapter(produkList, db);
+        // Init Adapter dengan List Display (Kosong dulu)
+        adapter = new ProdukAdapter(produkListDisplay, db);
         recyclerProduk.setAdapter(adapter);
 
         // =====================
-        // LOADING STATE AWAL
+        // LOAD DATA
         // =====================
-        showLoading();
+        loadData();
 
         // =====================
-        // DELAY UX (HALUS & MANUSIAWI)
+        // LISTENER
         // =====================
-        new Handler(Looper.getMainLooper()).postDelayed(
-                this::loadData,
-                400
-        );
+        fabTambah.setOnClickListener(v -> {
+            startActivity(new Intent(DaftarProdukActivity.this, TambahProdukActivity.class));
+        });
 
-        // =====================
-        // FAB TAMBAH PRODUK
-        // =====================
-        fabTambahProduk.setOnClickListener(v ->
-                startActivity(new Intent(
-                        DaftarProdukActivity.this,
-                        TambahProdukActivity.class
-                ))
-        );
+        // 🔥 LOGIKA PENCARIAN (REAL-TIME)
+        edtCari.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterData(s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
     }
 
-    // =====================
-    // LOAD DATA PRODUK
-    // =====================
     private void loadData() {
-        produkList.clear();
+        produkListMaster.clear();
 
         Cursor c = db.getAllProduk();
-        if (c != null) {
+        if (c != null && c.getCount() > 0) {
             while (c.moveToNext()) {
-                // Pastikan urutan index kolom sesuai dengan query "SELECT * FROM produk"
-                // 0: id, 1: nama, 2: modal, 3: jual, 4: stok
-                produkList.add(new Produk(
-                        c.getInt(0),
-                        c.getString(1),
-                        c.getInt(2),
-                        c.getInt(3),
-                        c.getInt(4)
+                produkListMaster.add(new Produk(
+                        c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_ID)),
+                        c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_NAMA)),
+                        c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_MODAL)),
+                        c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_JUAL)),
+                        c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_STOK))
                 ));
             }
             c.close();
         }
 
-        progressLoading.setVisibility(View.GONE);
-        updateUI();
+        // Setelah data diambil, tampilkan semua (reset filter)
+        filterData("");
+    }
+
+    // Fungsi Pintar untuk Mencari Barang
+    private void filterData(String keyword) {
+        produkListDisplay.clear();
+
+        if (keyword.isEmpty()) {
+            // Jika pencarian kosong, tampilkan semua
+            produkListDisplay.addAll(produkListMaster);
+        } else {
+            // Jika ada ketikan, cari yang cocok
+            String query = keyword.toLowerCase();
+            for (Produk p : produkListMaster) {
+                if (p.getNama().toLowerCase().contains(query)) {
+                    produkListDisplay.add(p);
+                }
+            }
+        }
+
+        // Update UI
         adapter.notifyDataSetChanged();
-    }
 
-    // =====================
-    // UI STATE HANDLER
-    // =====================
-    private void showLoading() {
-        progressLoading.setVisibility(View.VISIBLE);
-        recyclerProduk.setVisibility(View.GONE);
-        txtEmptyProduk.setVisibility(View.GONE);
-    }
-
-    private void updateUI() {
-        if (produkList.isEmpty()) {
-            txtEmptyProduk.setVisibility(View.VISIBLE);
+        // Cek apakah hasil pencarian kosong?
+        if (produkListDisplay.isEmpty()) {
+            layoutEmpty.setVisibility(View.VISIBLE);
             recyclerProduk.setVisibility(View.GONE);
         } else {
-            txtEmptyProduk.setVisibility(View.GONE);
+            layoutEmpty.setVisibility(View.GONE);
             recyclerProduk.setVisibility(View.VISIBLE);
         }
     }
@@ -151,11 +156,7 @@ public class DaftarProdukActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh data saat kembali dari TambahProdukActivity
-        showLoading();
-        new Handler(Looper.getMainLooper()).postDelayed(
-                this::loadData,
-                300
-        );
+        // Refresh data saat kembali dari halaman Tambah/Edit
+        loadData();
     }
 }

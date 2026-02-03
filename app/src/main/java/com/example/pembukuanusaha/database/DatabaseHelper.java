@@ -9,10 +9,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "pembukuan.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4; // Versi naik karena ada Tabel Pengeluaran
 
     // ======================
-    // TRANSAKSI
+    // TABEL TRANSAKSI (PEMASUKAN)
     // ======================
     public static final String TABLE_TRANSAKSI = "transaksi";
     public static final String COL_ID = "id";
@@ -25,7 +25,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COL_SYNC = "status_sync";
 
     // ======================
-    // PRODUK
+    // TABEL PRODUK
     // ======================
     public static final String TABLE_PRODUK = "produk";
     public static final String COL_PRODUK_ID = "id";
@@ -34,46 +34,86 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COL_PRODUK_JUAL = "harga_jual";
     public static final String COL_PRODUK_STOK = "stok";
 
+    // ======================
+    // TABEL PENGELUARAN (BARU)
+    // ======================
+    public static final String TABLE_PENGELUARAN = "pengeluaran";
+    public static final String COL_OUT_ID = "id";
+    public static final String COL_OUT_NAMA = "nama_pengeluaran";
+    public static final String COL_OUT_NOMINAL = "nominal";
+    public static final String COL_OUT_KATEGORI = "kategori";
+    public static final String COL_OUT_TANGGAL = "tanggal";
+
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
-    // ======================
-    // CREATE TABLE
-    // ======================
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL(
-                "CREATE TABLE " + TABLE_TRANSAKSI + " (" +
-                        COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                        COL_NAMA + " TEXT, " +
-                        COL_HARGA_JUAL + " INTEGER, " +
-                        COL_HARGA_MODAL + " INTEGER, " +
-                        COL_JUMLAH + " INTEGER, " +
-                        COL_LABA + " INTEGER, " +
-                        COL_TANGGAL + " TEXT, " +
-                        COL_SYNC + " INTEGER DEFAULT 0)"
-        );
+        // Tabel Transaksi
+        db.execSQL("CREATE TABLE " + TABLE_TRANSAKSI + " (" +
+                COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COL_NAMA + " TEXT, " +
+                COL_HARGA_JUAL + " INTEGER, " +
+                COL_HARGA_MODAL + " INTEGER, " +
+                COL_JUMLAH + " INTEGER, " +
+                COL_LABA + " INTEGER, " +
+                COL_TANGGAL + " TEXT, " +
+                COL_SYNC + " INTEGER DEFAULT 0)");
 
-        db.execSQL(
-                "CREATE TABLE " + TABLE_PRODUK + " (" +
-                        COL_PRODUK_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                        COL_PRODUK_NAMA + " TEXT, " +
-                        COL_PRODUK_MODAL + " INTEGER, " +
-                        COL_PRODUK_JUAL + " INTEGER, " +
-                        COL_PRODUK_STOK + " INTEGER)"
-        );
+        // Tabel Produk
+        db.execSQL("CREATE TABLE " + TABLE_PRODUK + " (" +
+                COL_PRODUK_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COL_PRODUK_NAMA + " TEXT, " +
+                COL_PRODUK_MODAL + " INTEGER, " +
+                COL_PRODUK_JUAL + " INTEGER, " +
+                COL_PRODUK_STOK + " INTEGER)");
+
+        // Tabel Pengeluaran
+        createTablePengeluaran(db);
+    }
+
+    private void createTablePengeluaran(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE " + TABLE_PENGELUARAN + " (" +
+                COL_OUT_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COL_OUT_NAMA + " TEXT, " +
+                COL_OUT_NOMINAL + " INTEGER, " +
+                COL_OUT_KATEGORI + " TEXT, " +
+                COL_OUT_TANGGAL + " TEXT)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_TRANSAKSI);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PRODUK);
-        onCreate(db);
+        if (oldVersion < 4) {
+            createTablePengeluaran(db);
+        }
     }
 
     // ======================
-    // PRODUK
+    // CRUD PENGELUARAN
+    // ======================
+    public boolean insertPengeluaran(String nama, int nominal, String kategori, String tanggal) {
+        ContentValues cv = new ContentValues();
+        cv.put(COL_OUT_NAMA, nama);
+        cv.put(COL_OUT_NOMINAL, nominal);
+        cv.put(COL_OUT_KATEGORI, kategori);
+        cv.put(COL_OUT_TANGGAL, tanggal);
+        return getWritableDatabase().insert(TABLE_PENGELUARAN, null, cv) != -1;
+    }
+
+    public Cursor getAllPengeluaran() {
+        return getReadableDatabase().rawQuery("SELECT * FROM " + TABLE_PENGELUARAN + " ORDER BY " + COL_OUT_TANGGAL + " DESC", null);
+    }
+
+    public int getTotalPengeluaran() {
+        Cursor c = getReadableDatabase().rawQuery("SELECT SUM(" + COL_OUT_NOMINAL + ") FROM " + TABLE_PENGELUARAN, null);
+        int total = (c.moveToFirst()) ? c.getInt(0) : 0;
+        c.close();
+        return total;
+    }
+
+    // ======================
+    // PRODUK (YANG TADI ERROR)
     // ======================
     public boolean insertProduk(String nama, int modal, int jual, int stok) {
         ContentValues cv = new ContentValues();
@@ -88,23 +128,22 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return getReadableDatabase().rawQuery("SELECT * FROM " + TABLE_PRODUK, null);
     }
 
+    // 🔥 INI YANG KEMARIN HILANG (deleteProduk)
     public boolean deleteProduk(int id) {
-        return getWritableDatabase().delete(
-                TABLE_PRODUK,
-                COL_PRODUK_ID + "=?",
-                new String[]{String.valueOf(id)}
-        ) > 0;
+        return getWritableDatabase().delete(TABLE_PRODUK, COL_PRODUK_ID + "=?", new String[]{String.valueOf(id)}) > 0;
     }
 
-    // 🔥 PENTING: Untuk Update Stok
     public void updateStokProduk(int id, int stokBaru) {
         ContentValues cv = new ContentValues();
         cv.put(COL_PRODUK_STOK, stokBaru);
-        getWritableDatabase().update(
-                TABLE_PRODUK,
-                cv,
-                COL_PRODUK_ID + "=?",
-                new String[]{String.valueOf(id)}
+        getWritableDatabase().update(TABLE_PRODUK, cv, COL_PRODUK_ID + "=?", new String[]{String.valueOf(id)});
+    }
+
+    // Fitur: Deteksi Stok Menipis (Ayo Belanja)
+    public Cursor getProdukHampirHabis() {
+        return getReadableDatabase().rawQuery(
+                "SELECT * FROM " + TABLE_PRODUK + " WHERE " + COL_PRODUK_STOK + " <= 5 ORDER BY " + COL_PRODUK_STOK + " ASC",
+                null
         );
     }
 
@@ -119,7 +158,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COL_JUMLAH, jumlah);
         cv.put(COL_LABA, laba);
         cv.put(COL_TANGGAL, tanggal);
-        cv.put(COL_SYNC, 0); // Default belum sync
+        cv.put(COL_SYNC, 0);
         return getWritableDatabase().insert(TABLE_TRANSAKSI, null, cv) != -1;
     }
 
@@ -155,7 +194,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // ======================
-    // INSIGHT (YANG HILANG KEMARIN)
+    // INSIGHT
     // ======================
     public String getProdukTerlaris() {
         Cursor c = getReadableDatabase().rawQuery(
@@ -165,9 +204,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         " ORDER BY total DESC LIMIT 1",
                 null
         );
-        String hasil = c.moveToFirst()
-                ? c.getString(0) + " (" + c.getInt(1) + " terjual)"
-                : "Belum ada data";
+        String hasil = c.moveToFirst() ? c.getString(0) + " (" + c.getInt(1) + " terjual)" : "Belum ada data";
         c.close();
         return hasil;
     }
@@ -180,15 +217,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         " ORDER BY total DESC LIMIT 1",
                 null
         );
-        String hasil = c.moveToFirst()
-                ? c.getString(0) + " (Rp " + c.getInt(1) + ")"
-                : "Belum ada data";
+        String hasil = c.moveToFirst() ? c.getString(0) + " (Rp " + c.getInt(1) + ")" : "Belum ada data";
         c.close();
         return hasil;
     }
 
     // ======================
-    // SYNC FIRESTORE
+    // SYNC
     // ======================
     public Cursor getTransaksiBelumSync() {
         return getReadableDatabase().rawQuery("SELECT * FROM " + TABLE_TRANSAKSI + " WHERE " + COL_SYNC + " = 0", null);

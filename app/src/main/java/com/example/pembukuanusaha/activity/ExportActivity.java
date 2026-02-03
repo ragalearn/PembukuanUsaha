@@ -8,15 +8,13 @@ import android.os.Environment;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
+import androidx.cardview.widget.CardView; // PENTING: Menggunakan CardView sesuai UI baru
 import androidx.core.content.FileProvider;
 
 import com.example.pembukuanusaha.R;
 import com.example.pembukuanusaha.database.DatabaseHelper;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.Phrase;
-import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 
@@ -33,7 +31,8 @@ import java.util.Locale;
 
 public class ExportActivity extends AppCompatActivity {
 
-    CardView cardExcel, cardPdf;
+    // Menggunakan ID sesuai XML baru (btnExcel, btnPdf)
+    CardView btnExcel, btnPdf;
     DatabaseHelper db;
 
     @Override
@@ -41,23 +40,32 @@ public class ExportActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_export);
 
-        cardExcel = findViewById(R.id.cardExcel);
-        cardPdf   = findViewById(R.id.cardPdf);
-        db        = new DatabaseHelper(this);
+        // Init View (Sesuai ID di activity_export.xml yang baru)
+        btnExcel = findViewById(R.id.btnExcel);
+        btnPdf   = findViewById(R.id.btnPdf);
+        db       = new DatabaseHelper(this);
 
-        cardExcel.setOnClickListener(v -> exportToExcel());
-        cardPdf.setOnClickListener(v -> exportToPdf());
+        // Listener Tombol
+        btnExcel.setOnClickListener(v -> exportToExcel());
+        btnPdf.setOnClickListener(v -> exportToPdf());
     }
 
     // ===========================
-    // EXPORT EXCEL
+    // 1. LOGIKA EXPORT EXCEL (Apache POI)
     // ===========================
     private void exportToExcel() {
         try {
+            // Cek data dulu
+            Cursor c = db.getAllTransaksi();
+            if (c == null || c.getCount() == 0) {
+                Toast.makeText(this, "Data Transaksi Kosong!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             Workbook wb = new HSSFWorkbook();
             Sheet sheet = wb.createSheet("Laporan Transaksi");
 
-            // Header
+            // Buat Header yang Rapi
             Row headerRow = sheet.createRow(0);
             headerRow.createCell(0).setCellValue("TANGGAL");
             headerRow.createCell(1).setCellValue("NAMA PRODUK");
@@ -65,27 +73,31 @@ public class ExportActivity extends AppCompatActivity {
             headerRow.createCell(3).setCellValue("HARGA");
             headerRow.createCell(4).setCellValue("LABA");
 
-            // Data
-            Cursor c = db.getAllTransaksi();
+            // Isi Data
             int rowIndex = 1;
-            while (c != null && c.moveToNext()) {
+            while (c.moveToNext()) {
                 Row row = sheet.createRow(rowIndex++);
-                row.createCell(0).setCellValue(c.getString(0)); // Tanggal
-                row.createCell(1).setCellValue(c.getString(1)); // Nama
-                row.createCell(2).setCellValue(c.getInt(2));    // Jumlah
-                row.createCell(3).setCellValue(c.getInt(3));    // Harga
-                row.createCell(4).setCellValue(c.getInt(4));    // Laba
+                // Pastikan indeks kolom sesuai dengan query database kamu
+                row.createCell(0).setCellValue(c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_TANGGAL)));
+                row.createCell(1).setCellValue(c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_NAMA)));
+                row.createCell(2).setCellValue(c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_JUMLAH)));
+                row.createCell(3).setCellValue(c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_HARGA_JUAL)));
+                row.createCell(4).setCellValue(c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_LABA)));
             }
-            if (c != null) c.close();
+            c.close();
 
             // Simpan File
-            String fileName = "Laporan_Pembukuan_" + System.currentTimeMillis() + ".xls";
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(new Date());
+            String fileName = "Laporan_Usaha_" + timeStamp + ".xls";
+
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
             FileOutputStream fos = new FileOutputStream(file);
             wb.write(fos);
             fos.close();
 
-            Toast.makeText(this, "Berhasil! Cek folder Download: " + fileName, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Sukses! Tersimpan di Download.", Toast.LENGTH_SHORT).show();
+
+            // Coba buka file otomatis
             bukaFile(file, "application/vnd.ms-excel");
 
         } catch (Exception e) {
@@ -95,62 +107,78 @@ public class ExportActivity extends AppCompatActivity {
     }
 
     // ===========================
-    // EXPORT PDF
+    // 2. LOGIKA EXPORT PDF (iText)
     // ===========================
     private void exportToPdf() {
         try {
-            String fileName = "Laporan_Pembukuan_" + System.currentTimeMillis() + ".pdf";
+            Cursor c = db.getAllTransaksi();
+            if (c == null || c.getCount() == 0) {
+                Toast.makeText(this, "Data Transaksi Kosong!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(new Date());
+            String fileName = "Laporan_Usaha_" + timeStamp + ".pdf";
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
 
             Document document = new Document();
             PdfWriter.getInstance(document, new FileOutputStream(file));
             document.open();
 
-            // Judul
-            document.add(new Paragraph("LAPORAN TRANSAKSI"));
-            document.add(new Paragraph("Dicetak pada: " + new SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(new Date())));
+            // Judul Dokumen
+            Paragraph judul = new Paragraph("LAPORAN TRANSAKSI USAHA");
+            judul.setAlignment(Paragraph.ALIGN_CENTER);
+            document.add(judul);
+
+            document.add(new Paragraph("Tanggal Cetak: " + new SimpleDateFormat("dd MMMM yyyy HH:mm", new Locale("id", "ID")).format(new Date())));
             document.add(new Paragraph("\n"));
 
-            // Tabel
-            PdfPTable table = new PdfPTable(5); // 5 Kolom
+            // Tabel PDF (5 Kolom)
+            PdfPTable table = new PdfPTable(5);
+            table.setWidthPercentage(100);
+
+            // Header Tabel
             table.addCell("Tanggal");
             table.addCell("Produk");
             table.addCell("Jml");
             table.addCell("Harga");
             table.addCell("Laba");
 
-            // Data
-            Cursor c = db.getAllTransaksi();
-            while (c != null && c.moveToNext()) {
-                table.addCell(c.getString(0));
-                table.addCell(c.getString(1));
-                table.addCell(String.valueOf(c.getInt(2)));
-                table.addCell(String.valueOf(c.getInt(3)));
-                table.addCell(String.valueOf(c.getInt(4)));
+            // Isi Data
+            while (c.moveToNext()) {
+                table.addCell(c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_TANGGAL)));
+                table.addCell(c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_NAMA)));
+                table.addCell(String.valueOf(c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_JUMLAH))));
+                table.addCell(String.valueOf(c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_HARGA_JUAL))));
+                table.addCell(String.valueOf(c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_LABA))));
             }
-            if (c != null) c.close();
+            c.close();
 
             document.add(table);
             document.close();
 
-            Toast.makeText(this, "Berhasil! Cek folder Download: " + fileName, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Sukses! Tersimpan di Download.", Toast.LENGTH_SHORT).show();
             bukaFile(file, "application/pdf");
 
         } catch (Exception e) {
             Toast.makeText(this, "Gagal Export PDF: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
         }
     }
 
-    // Intent untuk membuka file setelah export
+    // ===========================
+    // UTILS: BUKA FILE
+    // ===========================
     private void bukaFile(File file, String mimeType) {
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW);
+            // FileProvider dibutuhkan untuk Android 7.0+ (Nougat) ke atas
             Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
             intent.setDataAndType(uri, mimeType);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(intent);
         } catch (Exception e) {
-            // Abaikan jika tidak ada aplikasi pembuka
+            Toast.makeText(this, "File tersimpan, tapi tidak ada aplikasi untuk membukanya.", Toast.LENGTH_LONG).show();
         }
     }
 }

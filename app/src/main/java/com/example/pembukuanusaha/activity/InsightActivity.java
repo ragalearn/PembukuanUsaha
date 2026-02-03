@@ -1,8 +1,7 @@
 package com.example.pembukuanusaha.activity;
 
+import android.database.Cursor;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,29 +19,65 @@ public class InsightActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_insight);
 
+        // Init View sesuai ID di XML baru
         txtTerlaris = findViewById(R.id.txtTerlaris);
         txtPalingUntung = findViewById(R.id.txtPalingUntung);
 
         db = new DatabaseHelper(this);
 
-        // Sedikit delay agar transisi terasa smooth
-        new Handler(Looper.getMainLooper()).postDelayed(this::loadInsightData, 200);
+        loadInsightData();
     }
 
     private void loadInsightData() {
-        // Ambil data dari metode canggih di DatabaseHelper
-        String terlaris = db.getProdukTerlaris();
-        String palingUntung = db.getProdukPalingUntung();
+        // 1. LOGIKA PRODUK TERLARIS (Qty Terbanyak)
+        // Kita butuh format: "Nama Produk (10 pcs)"
+        String terlaris = "Belum ada data";
+        try {
+            // Query: Cari produk dengan total jumlah terjual tertinggi
+            String query = "SELECT " + DatabaseHelper.COL_NAMA + ", SUM(" + DatabaseHelper.COL_JUMLAH + ") as total_qty " +
+                    "FROM " + DatabaseHelper.TABLE_TRANSAKSI + " " +
+                    "GROUP BY " + DatabaseHelper.COL_NAMA + " " +
+                    "ORDER BY total_qty DESC LIMIT 1";
 
-        // Tampilkan ke layar
+            Cursor c = db.getReadableDatabase().rawQuery(query, null);
+            if (c.moveToFirst()) {
+                String nama = c.getString(0);
+                int qty = c.getInt(1);
+                terlaris = nama + " (" + qty + " pcs)";
+            }
+            c.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         txtTerlaris.setText(terlaris);
-        txtPalingUntung.setText(palingUntung);
+
+
+        // 2. LOGIKA JUARA CUAN (Total Laba Terbesar)
+        // Kita butuh format: "Nama Produk"
+        String cuan = "Belum ada data";
+        try {
+            // Query: Cari produk dengan total laba tertinggi
+            String query = "SELECT " + DatabaseHelper.COL_NAMA + ", SUM(" + DatabaseHelper.COL_LABA + ") as total_laba " +
+                    "FROM " + DatabaseHelper.TABLE_TRANSAKSI + " " +
+                    "GROUP BY " + DatabaseHelper.COL_NAMA + " " +
+                    "ORDER BY total_laba DESC LIMIT 1";
+
+            Cursor c = db.getReadableDatabase().rawQuery(query, null);
+            if (c.moveToFirst()) {
+                String nama = c.getString(0);
+                cuan = nama; // Hanya nama produk
+            }
+            c.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        txtPalingUntung.setText(cuan);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh data saat user kembali ke halaman ini
+        // Refresh data saat kembali ke halaman ini
         loadInsightData();
     }
 }

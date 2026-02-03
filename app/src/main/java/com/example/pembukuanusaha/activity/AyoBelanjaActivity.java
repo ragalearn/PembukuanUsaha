@@ -2,8 +2,8 @@ package com.example.pembukuanusaha.activity;
 
 import android.database.Cursor;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -15,6 +15,8 @@ import com.example.pembukuanusaha.R;
 import com.example.pembukuanusaha.database.DatabaseHelper;
 import com.example.pembukuanusaha.model.Produk;
 import com.example.pembukuanusaha.session.SessionManager;
+import com.example.pembukuanusaha.utils.RupiahFormatter; // Pakai formatter biar rapi
+import com.google.android.material.button.MaterialButton; // Update ke MaterialButton
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +25,7 @@ public class AyoBelanjaActivity extends AppCompatActivity {
 
     Spinner spinnerProduk;
     EditText edtJumlah;
-    Button btnHitung;
+    MaterialButton btnHitung; // Tipe baru
     TextView txtHasil;
 
     DatabaseHelper db;
@@ -38,7 +40,8 @@ public class AyoBelanjaActivity extends AppCompatActivity {
         // =====================
         SessionManager session = new SessionManager(this);
         if (!session.isAdmin()) {
-            finish(); // kasir tidak boleh masuk
+            Toast.makeText(this, "Akses Ditolak: Hanya Admin", Toast.LENGTH_SHORT).show();
+            finish();
             return;
         }
 
@@ -48,40 +51,42 @@ public class AyoBelanjaActivity extends AppCompatActivity {
         // INIT VIEW
         // =====================
         spinnerProduk = findViewById(R.id.spinnerProduk);
-        edtJumlah = findViewById(R.id.edtJumlah);
-        btnHitung = findViewById(R.id.btnHitung);
-        txtHasil = findViewById(R.id.txtHasil);
+        edtJumlah     = findViewById(R.id.edtJumlah);
+        btnHitung     = findViewById(R.id.btnHitung);
+        txtHasil      = findViewById(R.id.txtHasil);
 
         db = new DatabaseHelper(this);
+
         loadProduk();
 
         btnHitung.setOnClickListener(v -> hitungModal());
     }
 
-    // =====================
-    // LOAD PRODUK KE SPINNER
-    // =====================
     private void loadProduk() {
         produkList.clear();
         List<String> namaProduk = new ArrayList<>();
 
         Cursor c = db.getAllProduk();
-        while (c.moveToNext()) {
-            Produk p = new Produk(
-                    c.getInt(0),
-                    c.getString(1),
-                    c.getInt(2),
-                    c.getInt(3),
-                    c.getInt(4)
-            );
-            produkList.add(p);
-            namaProduk.add(p.getNama());
+        if (c != null) {
+            while (c.moveToNext()) {
+                Produk p = new Produk(
+                        c.getInt(0),
+                        c.getString(1),
+                        c.getInt(2),
+                        c.getInt(3),
+                        c.getInt(4)
+                );
+                produkList.add(p);
+                // Tampilkan nama + harga modal di spinner
+                namaProduk.add(p.getNama() + " (@" + RupiahFormatter.format(p.getHargaModal()) + ")");
+            }
+            c.close();
         }
-        c.close();
 
         if (produkList.isEmpty()) {
-            Toast.makeText(this, "Belum ada produk", Toast.LENGTH_LONG).show();
-            finish();
+            Toast.makeText(this, "Belum ada produk di database", Toast.LENGTH_LONG).show();
+            // Opsional: Matikan tombol jika kosong
+            btnHitung.setEnabled(false);
             return;
         }
 
@@ -94,12 +99,10 @@ public class AyoBelanjaActivity extends AppCompatActivity {
         spinnerProduk.setAdapter(adapter);
     }
 
-    // =====================
-    // HITUNG TOTAL MODAL
-    // =====================
     private void hitungModal() {
+        String jumlahStr = edtJumlah.getText().toString().trim();
 
-        if (edtJumlah.getText().toString().trim().isEmpty()) {
+        if (jumlahStr.isEmpty()) {
             edtJumlah.setError("Masukkan jumlah beli");
             edtJumlah.requestFocus();
             return;
@@ -107,23 +110,25 @@ public class AyoBelanjaActivity extends AppCompatActivity {
 
         int jumlah;
         try {
-            jumlah = Integer.parseInt(edtJumlah.getText().toString());
+            jumlah = Integer.parseInt(jumlahStr);
         } catch (NumberFormatException e) {
-            Toast.makeText(this, "Jumlah tidak valid", Toast.LENGTH_SHORT).show();
+            edtJumlah.setError("Angka tidak valid");
             return;
         }
 
         if (jumlah <= 0) {
-            edtJumlah.setError("Jumlah harus > 0");
-            edtJumlah.requestFocus();
+            edtJumlah.setError("Minimal 1");
             return;
         }
+
+        if (produkList.isEmpty()) return;
 
         int posisi = spinnerProduk.getSelectedItemPosition();
         Produk produk = produkList.get(posisi);
 
         int totalModal = produk.getHargaModal() * jumlah;
 
-        txtHasil.setText("Total Modal: Rp " + totalModal);
+        // Tampilkan Hasil dengan Format Rupiah
+        txtHasil.setText(RupiahFormatter.format(totalModal));
     }
 }
