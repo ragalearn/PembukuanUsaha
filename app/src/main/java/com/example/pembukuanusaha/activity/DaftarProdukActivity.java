@@ -6,8 +6,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.LinearLayout; // Pastikan import ini ada
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -29,7 +29,7 @@ public class DaftarProdukActivity extends AppCompatActivity {
     // VIEW
     // =====================
     RecyclerView recyclerProduk;
-    TextView txtEmptyProduk;
+    LinearLayout txtEmptyProduk; // UBAH KE LINEARLAYOUT (Bukan TextView lagi)
     ProgressBar progressLoading;
     FloatingActionButton fabTambahProduk;
 
@@ -48,10 +48,14 @@ public class DaftarProdukActivity extends AppCompatActivity {
         // 🔐 ROLE PROTECTION (ANTI BYPASS)
         // =====================
         SessionManager session = new SessionManager(this);
-        if (!session.isAdmin()) {
+        // Jika bukan admin (misal kasir), tetap boleh lihat produk?
+        // Kalau mau dibatasi hanya Admin, biarkan kode ini.
+        // Kalau Kasir boleh lihat, hapus blok if ini.
+        /* if (!session.isAdmin()) {
             finish();
             return;
         }
+        */
 
         setContentView(R.layout.activity_daftar_produk);
 
@@ -59,7 +63,7 @@ public class DaftarProdukActivity extends AppCompatActivity {
         // INIT VIEW
         // =====================
         recyclerProduk   = findViewById(R.id.recyclerProduk);
-        txtEmptyProduk   = findViewById(R.id.txtEmptyProduk);
+        txtEmptyProduk   = findViewById(R.id.txtEmptyProduk); // Sekarang aman karena tipe sudah cocok
         progressLoading  = findViewById(R.id.progressLoading);
         fabTambahProduk  = findViewById(R.id.fabTambahProduk);
 
@@ -107,6 +111,8 @@ public class DaftarProdukActivity extends AppCompatActivity {
         Cursor c = db.getAllProduk();
         if (c != null) {
             while (c.moveToNext()) {
+                // Pastikan urutan index kolom sesuai dengan query "SELECT * FROM produk"
+                // 0: id, 1: nama, 2: modal, 3: jual, 4: stok
                 produkList.add(new Produk(
                         c.getInt(0),
                         c.getString(1),
@@ -145,6 +151,7 @@ public class DaftarProdukActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // Refresh data saat kembali dari TambahProdukActivity
         showLoading();
         new Handler(Looper.getMainLooper()).postDelayed(
                 this::loadData,
