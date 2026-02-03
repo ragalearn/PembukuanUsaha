@@ -43,7 +43,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     // ======================
     @Override
     public void onCreate(SQLiteDatabase db) {
-
         db.execSQL(
                 "CREATE TABLE " + TABLE_TRANSAKSI + " (" +
                         COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -86,8 +85,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public Cursor getAllProduk() {
-        return getReadableDatabase()
-                .rawQuery("SELECT * FROM " + TABLE_PRODUK, null);
+        return getReadableDatabase().rawQuery("SELECT * FROM " + TABLE_PRODUK, null);
     }
 
     public boolean deleteProduk(int id) {
@@ -98,24 +96,22 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         ) > 0;
     }
 
-    public int getStokProduk(String namaProduk) {
-        Cursor c = getReadableDatabase().rawQuery(
-                "SELECT " + COL_PRODUK_STOK +
-                        " FROM " + TABLE_PRODUK +
-                        " WHERE " + COL_PRODUK_NAMA + "=?",
-                new String[]{namaProduk}
+    // 🔥 PENTING: Untuk Update Stok
+    public void updateStokProduk(int id, int stokBaru) {
+        ContentValues cv = new ContentValues();
+        cv.put(COL_PRODUK_STOK, stokBaru);
+        getWritableDatabase().update(
+                TABLE_PRODUK,
+                cv,
+                COL_PRODUK_ID + "=?",
+                new String[]{String.valueOf(id)}
         );
-        int stok = (c.moveToFirst()) ? c.getInt(0) : 0;
-        c.close();
-        return stok;
     }
 
     // ======================
     // TRANSAKSI
     // ======================
-    public boolean insertTransaksi(String nama, int hargaJual, int hargaModal,
-                                   int jumlah, int laba, String tanggal) {
-
+    public boolean insertTransaksi(String nama, int hargaJual, int hargaModal, int jumlah, int laba, String tanggal) {
         ContentValues cv = new ContentValues();
         cv.put(COL_NAMA, nama);
         cv.put(COL_HARGA_JUAL, hargaJual);
@@ -123,50 +119,43 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(COL_JUMLAH, jumlah);
         cv.put(COL_LABA, laba);
         cv.put(COL_TANGGAL, tanggal);
-        cv.put(COL_SYNC, 0);
-
-        return getWritableDatabase()
-                .insert(TABLE_TRANSAKSI, null, cv) != -1;
+        cv.put(COL_SYNC, 0); // Default belum sync
+        return getWritableDatabase().insert(TABLE_TRANSAKSI, null, cv) != -1;
     }
 
     public Cursor getAllTransaksi() {
-        return getReadableDatabase().rawQuery(
-                "SELECT " + COL_TANGGAL + ", " +
-                        COL_NAMA + ", " +
-                        COL_JUMLAH + ", " +
-                        COL_HARGA_JUAL + ", " +
-                        COL_LABA +
-                        " FROM " + TABLE_TRANSAKSI +
-                        " ORDER BY " + COL_TANGGAL + " ASC",
-                null
-        );
+        return getReadableDatabase().rawQuery("SELECT * FROM " + TABLE_TRANSAKSI + " ORDER BY " + COL_TANGGAL + " DESC", null);
     }
 
     // ======================
-    // DASHBOARD
+    // DASHBOARD & CHART
     // ======================
     public int getTotalOmzet() {
-        Cursor c = getReadableDatabase().rawQuery(
-                "SELECT SUM(" + COL_HARGA_JUAL + " * " + COL_JUMLAH + ") FROM " + TABLE_TRANSAKSI,
-                null
-        );
-        int total = (c.moveToFirst() && !c.isNull(0)) ? c.getInt(0) : 0;
+        Cursor c = getReadableDatabase().rawQuery("SELECT SUM(" + COL_HARGA_JUAL + " * " + COL_JUMLAH + ") FROM " + TABLE_TRANSAKSI, null);
+        int total = (c.moveToFirst()) ? c.getInt(0) : 0;
         c.close();
         return total;
     }
 
     public int getTotalLaba() {
-        Cursor c = getReadableDatabase().rawQuery(
-                "SELECT SUM(" + COL_LABA + ") FROM " + TABLE_TRANSAKSI,
-                null
-        );
-        int total = (c.moveToFirst() && !c.isNull(0)) ? c.getInt(0) : 0;
+        Cursor c = getReadableDatabase().rawQuery("SELECT SUM(" + COL_LABA + ") FROM " + TABLE_TRANSAKSI, null);
+        int total = (c.moveToFirst()) ? c.getInt(0) : 0;
         c.close();
         return total;
     }
 
+    public Cursor getOmzetHarian() {
+        return getReadableDatabase().rawQuery(
+                "SELECT " + COL_TANGGAL + ", SUM(" + COL_HARGA_JUAL + " * " + COL_JUMLAH + ") as omzet " +
+                        "FROM " + TABLE_TRANSAKSI +
+                        " GROUP BY " + COL_TANGGAL +
+                        " ORDER BY " + COL_TANGGAL + " ASC LIMIT 7",
+                null
+        );
+    }
+
     // ======================
-    // INSIGHT
+    // INSIGHT (YANG HILANG KEMARIN)
     // ======================
     public String getProdukTerlaris() {
         Cursor c = getReadableDatabase().rawQuery(
@@ -178,7 +167,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         );
         String hasil = c.moveToFirst()
                 ? c.getString(0) + " (" + c.getInt(1) + " terjual)"
-                : "Belum ada transaksi";
+                : "Belum ada data";
         c.close();
         return hasil;
     }
@@ -193,44 +182,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         );
         String hasil = c.moveToFirst()
                 ? c.getString(0) + " (Rp " + c.getInt(1) + ")"
-                : "Belum ada transaksi";
+                : "Belum ada data";
         c.close();
         return hasil;
     }
 
     // ======================
-    // GRAFIK
-    // ======================
-    public Cursor getOmzetHarian() {
-        return getReadableDatabase().rawQuery(
-                "SELECT " + COL_TANGGAL +
-                        ", SUM(" + COL_HARGA_JUAL + " * " + COL_JUMLAH + ") omzet " +
-                        "FROM " + TABLE_TRANSAKSI +
-                        " GROUP BY " + COL_TANGGAL +
-                        " ORDER BY " + COL_TANGGAL,
-                null
-        );
-    }
-
-    // ======================
-    // 🔥 FIRESTORE SYNC
+    // SYNC FIRESTORE
     // ======================
     public Cursor getTransaksiBelumSync() {
-        return getReadableDatabase().rawQuery(
-                "SELECT * FROM " + TABLE_TRANSAKSI +
-                        " WHERE " + COL_SYNC + " = 0",
-                null
-        );
+        return getReadableDatabase().rawQuery("SELECT * FROM " + TABLE_TRANSAKSI + " WHERE " + COL_SYNC + " = 0", null);
     }
 
     public void tandaiTransaksiSudahSync(int id) {
         ContentValues cv = new ContentValues();
         cv.put(COL_SYNC, 1);
-        getWritableDatabase().update(
-                TABLE_TRANSAKSI,
-                cv,
-                COL_ID + "=?",
-                new String[]{String.valueOf(id)}
-        );
+        getWritableDatabase().update(TABLE_TRANSAKSI, cv, COL_ID + "=?", new String[]{String.valueOf(id)});
     }
 }

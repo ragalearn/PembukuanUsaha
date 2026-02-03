@@ -4,15 +4,10 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-
 import com.example.pembukuanusaha.database.DatabaseHelper;
-import com.example.pembukuanusaha.session.BusinessSession;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
+import com.example.pembukuanusaha.session.SessionManager; // GUNAKAN SESSION MANAGER
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
@@ -23,90 +18,63 @@ public class FirestoreSyncHelper {
     private static final String TAG = "FirestoreSyncHelper";
 
     public static void syncTransaksi(Context context) {
-        // PERBAIKAN 1: Pindahkan semua inisialisasi ke awal & lakukan pengecekan
         FirebaseAuth auth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = auth.getCurrentUser();
-        if (currentUser == null) {
-            Log.w(TAG, "Sync dihentikan: User belum login.");
-            return;
-        }
 
-        BusinessSession bs = new BusinessSession(context);
-        if (!bs.isReady()) {
-            Log.w(TAG, "Sync dihentikan: Sesi bisnis belum siap (Usaha/Cabang belum dipilih).");
-            return;
-        }
+        if (currentUser == null) return;
 
-        // Ambil ID Usaha dan Cabang sekali saja di luar loop
-        String idUsaha = bs.getUsaha();
-        String idCabang = bs.getCabang();
+        // FIX: Gunakan SessionManager agar sesuai dengan LoginActivity
+        SessionManager session = new SessionManager(context);
 
-        // PERBAIKAN 2: Validasi ID Usaha dan Cabang sebelum memulai
+        String idUsaha = session.getUsahaId();
+        String idCabang = session.getCabangId();
+
+        // Validasi Sesi
         if (idUsaha == null || idUsaha.isEmpty() || idCabang == null || idCabang.isEmpty()) {
-            Log.e(TAG, "Sync GAGAL: ID Usaha atau ID Cabang kosong. Usaha: " + idUsaha + ", Cabang: " + idCabang);
+            Log.e(TAG, "Sync GAGAL: Data sesi kosong. User harus login ulang.");
             return;
         }
 
         DatabaseHelper db = new DatabaseHelper(context);
         FirebaseFirestore firestore = FirebaseFirestore.getInstance();
-        Cursor c = null; // Inisialisasi cursor dengan null
+        Cursor c = null;
 
         try {
+            // Ambil data lokal yang status_sync = 0
             c = db.getTransaksiBelumSync();
-            if (c == null || c.getCount() == 0) {
-                Log.i(TAG, "Tidak ada transaksi baru untuk disinkronkan.");
-                return; // Keluar jika tidak ada data
-            }
-
-            Log.i(TAG, "Memulai sinkronisasi untuk " + c.getCount() + " item.");
+            if (c == null || c.getCount() == 0) return;
 
             while (c.moveToNext()) {
-                final int id = c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_ID));
+                int id = c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_ID));
 
-                // Ambil semua data dari cursor dan masukkan ke dalam Map
                 Map<String, Object> data = new HashMap<>();
-                try {
-                    data.put("uid", currentUser.getUid());
-                    data.put("nama_produk", c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_NAMA)));
-                    data.put("harga_jual", c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_HARGA_JUAL)));
-                    data.put("harga_modal", c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_HARGA_MODAL)));
-                    data.put("jumlah", c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_JUMLAH)));
-                    data.put("laba", c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_LABA)));
-                    data.put("tanggal", c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_TANGGAL)));
-                    data.put("created_at", System.currentTimeMillis());
-                    data.put("sync_source", "android");
-                } catch (Exception e) {
-                    // PERBAIKAN 3: Tangani jika ada kolom yang hilang atau tipe data salah
-                    Log.e(TAG, "Error saat mengambil data dari cursor untuk ID: " + id + ". Kolom mungkin tidak ada atau tipe data salah. Pesan: " + e.getMessage());
-                    continue; // Lanjutkan ke data berikutnya, jangan hentikan seluruh proses
-                }
+                data.put("uid", currentUser.getUid());
+                data.put("nama_produk", c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_NAMA)));
+                data.put("harga_jual", c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_HARGA_JUAL)));
+                data.put("harga_modal", c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_HARGA_MODAL)));
+                data.put("jumlah", c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_JUMLAH)));
+                data.put("laba", c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_LABA)));
+                data.put("tanggal", c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_TANGGAL)));
+                data.put("created_at", System.currentTimeMillis());
+                data.put("sync_source", "android");
 
-
+                // Upload ke Firestore
                 firestore.collection("usaha").document(idUsaha)
                         .collection("cabang").document(idCabang)
                         .collection("transaksi").add(data)
-                        .addOnSuccessListener(documentReference -> {
-                            Log.d(TAG, "Berhasil sinkron ID lokal: " + id + " ke Firestore.");
-                            // Pastikan objek db masih valid untuk digunakan
-                            DatabaseHelper dbSuccess = new DatabaseHelper(context);
-                            dbSuccess.tandaiTransaksiSudahSync(id);
-                            dbSuccess.close(); // Tutup koneksi setelah selesai
-                        })
-                        .addOnFailureListener(e -> Log.e(TAG, "Gagal sinkron ID " + id + ": " + e.getMessage()));
+                        .addOnSuccessListener(ref -> {
+                            // Jika sukses upload, update status lokal jadi SYNCED (1)
+                            // Hati-hati: Buka koneksi baru untuk update status
+                            DatabaseHelper dbUpdate = new DatabaseHelper(context);
+                            dbUpdate.tandaiTransaksiSudahSync(id);
+                            dbUpdate.close();
+                        });
             }
-
         } catch (Exception e) {
-            // Ini akan menangkap error seperti "column 'nama_kolom' does not exist"
-            Log.e(TAG, "FATAL ERROR saat proses sinkronisasi: " + e.getMessage());
-            e.printStackTrace(); // Cetak stack trace untuk debugging mendalam
+            Log.e(TAG, "Error Sync: " + e.getMessage());
         } finally {
-            if (c != null && !c.isClosed()) {
-                c.close();
-            }
-            if (db != null) {
-                db.close(); // PERBAIKAN 4: Tutup koneksi database utama di akhir
-            }
-            Log.i(TAG, "Proses sinkronisasi selesai.");
+            if (c != null) c.close();
+            db.close();
         }
     }
 }

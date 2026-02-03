@@ -1,10 +1,12 @@
 package com.example.pembukuanusaha.activity;
 
 import android.os.Bundle;
-import android.widget.Button;
+import android.os.Environment;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 
 import com.example.pembukuanusaha.R;
 
@@ -15,6 +17,7 @@ import java.nio.channels.FileChannel;
 
 public class BackupRestoreActivity extends AppCompatActivity {
 
+    CardView btnBackup, btnRestore;
     private static final String DB_NAME = "pembukuan.db";
 
     @Override
@@ -22,58 +25,74 @@ public class BackupRestoreActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_backup_restore);
 
-        Button btnBackup = findViewById(R.id.btnBackup);
-        Button btnRestore = findViewById(R.id.btnRestore);
+        btnBackup = findViewById(R.id.btnBackup);
+        btnRestore = findViewById(R.id.btnRestore);
 
-        btnBackup.setOnClickListener(v -> backupDatabase());
-        btnRestore.setOnClickListener(v -> restoreDatabase());
+        btnBackup.setOnClickListener(v -> backupData());
+        btnRestore.setOnClickListener(v -> konfirmasiRestore());
     }
 
-    private void backupDatabase() {
+    private void backupData() {
         try {
-            File dbFile = getDatabasePath(DB_NAME);
+            File sd = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File data = Environment.getDataDirectory();
 
-            File backupDir = new File(getExternalFilesDir(null), "backup");
-            if (!backupDir.exists()) backupDir.mkdirs();
+            if (sd.canWrite()) {
+                String currentDBPath = "//data//" + getPackageName() + "//databases//" + DB_NAME;
+                String backupDBPath = "Backup_Pembukuan.db";
+                File currentDB = new File(data, currentDBPath);
+                File backupDB = new File(sd, backupDBPath);
 
-            File backupFile = new File(backupDir, DB_NAME);
-
-            copyFile(dbFile, backupFile);
-
-            Toast.makeText(this, "Backup berhasil", Toast.LENGTH_LONG).show();
-        } catch (Exception e) {
-            Toast.makeText(this, "Backup gagal: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
-
-    private void restoreDatabase() {
-        try {
-            File backupFile = new File(
-                    getExternalFilesDir(null) + "/backup/" + DB_NAME
-            );
-
-            if (!backupFile.exists()) {
-                Toast.makeText(this, "File backup tidak ditemukan", Toast.LENGTH_LONG).show();
-                return;
+                if (currentDB.exists()) {
+                    FileChannel src = new FileInputStream(currentDB).getChannel();
+                    FileChannel dst = new FileOutputStream(backupDB).getChannel();
+                    dst.transferFrom(src, 0, src.size());
+                    src.close();
+                    dst.close();
+                    Toast.makeText(this, "Backup Sukses! Disimpan di Download/" + backupDBPath, Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "Database belum ada.", Toast.LENGTH_SHORT).show();
+                }
             }
-
-            File dbFile = getDatabasePath(DB_NAME);
-
-            copyFile(backupFile, dbFile);
-
-            Toast.makeText(this, "Restore berhasil. Buka ulang aplikasi.", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
-            Toast.makeText(this, "Restore gagal: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Backup Gagal: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void copyFile(File src, File dst) throws Exception {
-        FileChannel inChannel = new FileInputStream(src).getChannel();
-        FileChannel outChannel = new FileOutputStream(dst).getChannel();
+    private void konfirmasiRestore() {
+        new AlertDialog.Builder(this)
+                .setTitle("Restore Data")
+                .setMessage("PERINGATAN: Data saat ini akan ditimpa dengan data backup. Lanjutkan?")
+                .setPositiveButton("Ya, Restore", (dialog, which) -> restoreData())
+                .setNegativeButton("Batal", null)
+                .show();
+    }
 
-        inChannel.transferTo(0, inChannel.size(), outChannel);
+    private void restoreData() {
+        try {
+            File sd = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File data = Environment.getDataDirectory();
 
-        inChannel.close();
-        outChannel.close();
+            String currentDBPath = "//data//" + getPackageName() + "//databases//" + DB_NAME;
+            String backupDBPath = "Backup_Pembukuan.db";
+            File currentDB = new File(data, currentDBPath);
+            File backupDB = new File(sd, backupDBPath);
+
+            if (backupDB.exists()) {
+                FileChannel src = new FileInputStream(backupDB).getChannel();
+                FileChannel dst = new FileOutputStream(currentDB).getChannel();
+                dst.transferFrom(src, 0, src.size());
+                src.close();
+                dst.close();
+                Toast.makeText(this, "Restore Berhasil! Silakan restart aplikasi.", Toast.LENGTH_LONG).show();
+
+                // Opsional: Tutup aplikasi agar database refresh
+                // finishAffinity();
+            } else {
+                Toast.makeText(this, "File backup tidak ditemukan di Download/Backup_Pembukuan.db", Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Restore Gagal: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 }

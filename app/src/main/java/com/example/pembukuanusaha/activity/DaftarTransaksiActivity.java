@@ -1,10 +1,8 @@
 package com.example.pembukuanusaha.activity;
 
+import android.database.Cursor;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.View;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,147 +11,84 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.pembukuanusaha.R;
 import com.example.pembukuanusaha.adapter.TransaksiAdapter;
+import com.example.pembukuanusaha.database.DatabaseHelper;
 import com.example.pembukuanusaha.model.Transaksi;
-import com.example.pembukuanusaha.session.SessionManager;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.example.pembukuanusaha.sync.FirestoreSyncHelper;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class DaftarTransaksiActivity extends AppCompatActivity {
 
-    // =====================
-    // VIEW
-    // =====================
     RecyclerView recyclerTransaksi;
     TextView txtEmpty;
-    ProgressBar progressLoading;
-
-    // =====================
-    // DATA
-    // =====================
+    DatabaseHelper db; // Kita pakai Database Lokal
     List<Transaksi> transaksiList;
     TransaksiAdapter adapter;
-
-    // =====================
-    // FIRESTORE & SESSION
-    // =====================
-    FirebaseFirestore firestore;
-    SessionManager session;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_daftar_transaksi);
 
-        // =====================
-        // INIT VIEW
-        // =====================
         recyclerTransaksi = findViewById(R.id.recyclerTransaksi);
         txtEmpty = findViewById(R.id.txtEmpty);
-        progressLoading = findViewById(R.id.progressLoading);
 
         recyclerTransaksi.setLayoutManager(new LinearLayoutManager(this));
 
+        db = new DatabaseHelper(this);
         transaksiList = new ArrayList<>();
         adapter = new TransaksiAdapter(transaksiList);
         recyclerTransaksi.setAdapter(adapter);
 
-        // =====================
-        // INIT FIRESTORE & SESSION
-        // =====================
-        firestore = FirebaseFirestore.getInstance();
-        session = new SessionManager(this);
+        // 1. Tampilkan data dari HP (Cepat & Bisa Offline)
+        loadDataLokal();
 
-        // =====================
-        // LOADING STATE AWAL
-        // =====================
-        showLoading();
-
-        // =====================
-        // DELAY UX (OPSIONAL TAPI CAKEP)
-        // =====================
-        new Handler(Looper.getMainLooper()).postDelayed(
-                this::loadTransaksiRealtime,
-                500
-        );
+        // 2. Coba sync ke internet di background (tanpa ganggu user)
+        FirestoreSyncHelper.syncTransaksi(this);
     }
 
-    // =====================
-    // REALTIME TRANSAKSI
-    // =====================
-    private void loadTransaksiRealtime() {
+    private void loadDataLokal() {
+        transaksiList.clear();
 
-        String usahaId = session.getUsahaId();
-        String cabangId = session.getCabangId();
+        // AMBIL DARI SQLITE (LOKAL)
+        Cursor c = db.getAllTransaksi();
 
-        if (usahaId == null || cabangId == null ||
-                usahaId.isEmpty() || cabangId.isEmpty()) {
+        if (c != null && c.getCount() > 0) {
+            while (c.moveToNext()) {
+                // Pastikan urutan ambil datanya sesuai kolom database
+                String tanggal = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_TANGGAL));
+                String nama = c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_NAMA));
+                int jumlah = c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_JUMLAH));
+                int harga = c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_HARGA_JUAL));
+                int laba = c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_LABA));
 
-            showEmptyState();
-            return;
+                transaksiList.add(new Transaksi(tanggal, nama, jumlah, harga, laba));
+            }
+            c.close();
         }
 
-        firestore.collection("usaha")
-                .document(usahaId)
-                .collection("cabang")
-                .document(cabangId)
-                .collection("transaksi")
-                .orderBy("created_at")
-                .addSnapshotListener((snapshots, error) -> {
-
-                    progressLoading.setVisibility(View.GONE);
-
-                    if (error != null || snapshots == null) {
-                        showEmptyState();
-                        return;
-                    }
-
-                    transaksiList.clear();
-
-                    for (DocumentSnapshot doc : snapshots) {
-
-                        Transaksi transaksi = new Transaksi(
-                                doc.getString("tanggal"),
-                                doc.getString("nama_produk"),
-                                doc.getLong("jumlah") != null
-                                        ? doc.getLong("jumlah").intValue() : 0,
-                                doc.getLong("harga_jual") != null
-                                        ? doc.getLong("harga_jual").intValue() : 0,
-                                doc.getLong("laba") != null
-                                        ? doc.getLong("laba").intValue() : 0
-                        );
-
-                        transaksiList.add(transaksi);
-                    }
-
-                    updateUI();
-                    adapter.notifyDataSetChanged();
-                });
-    }
-
-    // =====================
-    // UI STATE HANDLER
-    // =====================
-    private void showLoading() {
-        progressLoading.setVisibility(View.VISIBLE);
-        recyclerTransaksi.setVisibility(View.GONE);
-        txtEmpty.setVisibility(View.GONE);
-    }
-
-    private void updateUI() {
+        // Update UI
         if (transaksiList.isEmpty()) {
-            showEmptyState();
+            txtEmpty.setVisibility(View.VISIBLE);
+            recyclerTransaksi.setVisibility(View.GONE);
         } else {
             txtEmpty.setVisibility(View.GONE);
             recyclerTransaksi.setVisibility(View.VISIBLE);
         }
+
+        adapter.notifyDataSetChanged();
     }
 
-    private void showEmptyState() {
-        progressLoading.setVisibility(View.GONE);
-        txtEmpty.setVisibility(View.VISIBLE);
-        recyclerTransaksi.setVisibility(View.GONE);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadDataLokal(); // Refresh data saat user kembali ke layar ini
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (db != null) db.close(); // Tutup koneksi database agar hemat memori
     }
 }

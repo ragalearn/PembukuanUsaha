@@ -43,15 +43,10 @@ public class TambahTransaksiActivity extends AppCompatActivity {
         txtHasil      = findViewById(R.id.txtHasil);
 
         db = new DatabaseHelper(this);
-
         loadProduk();
-
         btnHitung.setOnClickListener(v -> simpanTransaksi());
     }
 
-    // =====================
-    // LOAD PRODUK KE SPINNER
-    // =====================
     private void loadProduk() {
         Cursor c = db.getAllProduk();
         List<String> namaProduk = new ArrayList<>();
@@ -59,59 +54,34 @@ public class TambahTransaksiActivity extends AppCompatActivity {
 
         if (c != null) {
             while (c.moveToNext()) {
-                Produk p = new Produk(
-                        c.getInt(0),
-                        c.getString(1),
-                        c.getInt(2),
-                        c.getInt(3),
-                        c.getInt(4)
-                );
+                Produk p = new Produk(c.getInt(0), c.getString(1), c.getInt(2), c.getInt(3), c.getInt(4));
                 produkList.add(p);
-                namaProduk.add(p.getNama());
+                namaProduk.add(p.getNama() + " (Stok: " + p.getStok() + ")"); // Tampilkan sisa stok di spinner
             }
             c.close();
         }
 
         if (produkList.isEmpty()) {
-            Snackbar.make(
-                    findViewById(android.R.id.content),
-                    "Belum ada produk. Tambahkan produk dulu.",
-                    Snackbar.LENGTH_LONG
-            ).show();
+            Toast.makeText(this, "Belum ada produk. Tambahkan dulu!", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_spinner_item,
-                namaProduk
-        );
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, namaProduk);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerProduk.setAdapter(adapter);
     }
 
-    // =====================
-    // SIMPAN TRANSAKSI
-    // =====================
     private void simpanTransaksi() {
-
         String jumlahStr = edtJumlah.getText().toString().trim();
         if (jumlahStr.isEmpty()) {
-            edtJumlah.setError("Jumlah wajib diisi");
+            edtJumlah.setError("Isi jumlah!");
             return;
         }
 
-        int jumlah;
-        try {
-            jumlah = Integer.parseInt(jumlahStr);
-        } catch (NumberFormatException e) {
-            Toast.makeText(this, "Jumlah tidak valid", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
+        int jumlah = Integer.parseInt(jumlahStr);
         if (jumlah <= 0) {
-            edtJumlah.setError("Jumlah harus lebih dari 0");
+            edtJumlah.setError("Minimal 1");
             return;
         }
 
@@ -119,46 +89,30 @@ public class TambahTransaksiActivity extends AppCompatActivity {
 
         // CEK STOK
         if (jumlah > produk.getStok()) {
-            Snackbar.make(
-                    findViewById(android.R.id.content),
-                    "Stok tidak mencukupi",
-                    Snackbar.LENGTH_LONG
-            ).show();
+            Snackbar.make(btnHitung, "Stok tidak cukup! Sisa: " + produk.getStok(), Snackbar.LENGTH_LONG)
+                    .setBackgroundTint(getResources().getColor(android.R.color.holo_red_dark))
+                    .show();
             return;
         }
 
+        // HITUNG DATA
         int hargaJual  = produk.getHargaJual();
         int hargaModal = produk.getHargaModal();
         int laba       = (hargaJual - hargaModal) * jumlah;
+        String tanggal = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-        String tanggal = new SimpleDateFormat(
-                "yyyy-MM-dd",
-                Locale.getDefault()
-        ).format(new Date());
-
-        boolean sukses = db.insertTransaksi(
-                produk.getNama(),
-                hargaJual,
-                hargaModal,
-                jumlah,
-                laba,
-                tanggal
-        );
+        // SIMPAN TRANSAKSI
+        boolean sukses = db.insertTransaksi(produk.getNama(), hargaJual, hargaModal, jumlah, laba, tanggal);
 
         if (sukses) {
-            txtHasil.setText("Laba: Rp " + laba);
-            Snackbar.make(
-                    findViewById(android.R.id.content),
-                    "Transaksi berhasil disimpan",
-                    Snackbar.LENGTH_LONG
-            ).show();
+            // 🔥 UPDATE STOK BARU (KURANGI STOK)
+            int stokBaru = produk.getStok() - jumlah;
+            db.updateStokProduk(produk.getId(), stokBaru);
+
+            Toast.makeText(this, "Transaksi Sukses! Laba: Rp " + laba, Toast.LENGTH_SHORT).show();
             finish();
         } else {
-            Snackbar.make(
-                    findViewById(android.R.id.content),
-                    "Gagal menyimpan transaksi",
-                    Snackbar.LENGTH_LONG
-            ).show();
+            Toast.makeText(this, "Gagal menyimpan", Toast.LENGTH_SHORT).show();
         }
     }
 }

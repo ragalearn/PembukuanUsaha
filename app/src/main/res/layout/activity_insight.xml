@@ -1,81 +1,192 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:background="#F6F7FB">
 
-    <!-- ===================== -->
-    <!-- CONTENT -->
-    <!-- ===================== -->
     <LinearLayout
-        android:id="@+id/layoutContent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:padding="24dp">
 
         <TextView
-            android:text="Insight Usaha"
-            android:textSize="22sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Analisa Bisnis"
+            android:textSize="24sp"
             android:textStyle="bold"
+            android:textColor="#111" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Intip performa usahamu di sini"
+            android:textSize="14sp"
+            android:textColor="#666"
+            android:layout_marginBottom="24dp"/>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@android:color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="20dp"
+                android:gravity="center_vertical">
+
+                <FrameLayout
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/ic_launcher_background"
+                    android:backgroundTint="#E3F2FD">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🏆"
+                        android:textSize="24sp"
+                        android:layout_gravity="center"/>
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Produk Terlaris"
+                        android:textSize="12sp"
+                        android:textColor="#757575"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"/>
+
+                    <TextView
+                        android:id="@+id/txtTerlaris"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Memuat data..."
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#1A237E"
+                        android:layout_marginTop="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Paling banyak dibeli pelanggan"
+                        android:textSize="12sp"
+                        android:textColor="#9E9E9E"
+                        android:layout_marginTop="2dp"/>
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@android:color/white">
 
-        <TextView
-            android:text="Produk Terlaris"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="20dp"
+                android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/txtTerlaris"
-            android:text="-"
-            android:textSize="18sp"
-            android:layout_marginBottom="24dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+                <FrameLayout
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/ic_launcher_background"
+                    android:backgroundTint="#E8F5E9">
 
-        <TextView
-            android:text="Produk Paling Menguntungkan"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💰"
+                        android:textSize="24sp"
+                        android:layout_gravity="center"/>
+                </FrameLayout>
 
-        <TextView
-            android:id="@+id/txtUntung"
-            android:text="-"
-            android:textSize="18sp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Juara Cuan (Profit)"
+                        android:textSize="12sp"
+                        android:textColor="#757575"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.05"/>
+
+                    <TextView
+                        android:id="@+id/txtPalingUntung"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Memuat data..."
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#2E7D32"
+                        android:layout_marginTop="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Penyumbang keuntungan terbesar"
+                        android:textSize="12sp"
+                        android:textColor="#9E9E9E"
+                        android:layout_marginTop="2dp"/>
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#FFF3E0">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="💡 Tips Bisnis"
+                    android:textStyle="bold"
+                    android:textColor="#E65100"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pastikan stok 'Produk Terlaris' selalu aman agar tidak kehilangan omzet. Coba tawarkan produk lain ke pembeli produk tersebut!"
+                    android:textSize="14sp"
+                    android:textColor="#BF360C"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="4dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
     </LinearLayout>
-
-    <!-- ===================== -->
-    <!-- EMPTY STATE -->
-    <!-- ===================== -->
-    <TextView
-        android:id="@+id/txtEmptyInsight"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Belum ada insight.\nMulai catat transaksi dulu ya ✨"
-        android:textSize="16sp"
-        android:textColor="#777"
-        android:gravity="center"
-        android:padding="24dp"
-        android:layout_gravity="center"
-        android:visibility="gone"/>
-
-    <!-- ===================== -->
-    <!-- LOADING -->
-    <!-- ===================== -->
-    <ProgressBar
-        android:id="@+id/progressLoading"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone"/>
-
-</FrameLayout>
+</ScrollView>
