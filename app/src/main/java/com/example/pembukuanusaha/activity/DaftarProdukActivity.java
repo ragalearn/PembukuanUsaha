@@ -3,8 +3,6 @@ package com.example.pembukuanusaha.activity;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -29,19 +27,19 @@ import java.util.List;
 public class DaftarProdukActivity extends AppCompatActivity {
 
     // =====================
-    // VIEW (Sesuai XML Baru)
+    // VIEW
     // =====================
     RecyclerView recyclerProduk;
-    LinearLayout layoutEmpty; // Dulu TextView, sekarang Layout agar lebih cantik
+    LinearLayout layoutEmpty;
     FloatingActionButton fabTambah;
-    EditText edtCari; // FITUR BARU: Kolom Pencarian
+    EditText edtCari;
 
     // =====================
     // DATA
     // =====================
     DatabaseHelper db;
-    List<Produk> produkListMaster = new ArrayList<>(); // Menyimpan SEMUA data
-    List<Produk> produkListDisplay = new ArrayList<>(); // Menyimpan data yang DITAMPILKAN (Hasil Filter)
+    List<Produk> produkListMaster = new ArrayList<>();
+    List<Produk> produkListDisplay = new ArrayList<>();
     ProdukAdapter adapter;
 
     @Override
@@ -49,7 +47,7 @@ public class DaftarProdukActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         // =====================
-        // 🔐 ROLE PROTECTION (Kode Lamamu)
+        // 🔐 ROLE PROTECTION
         // =====================
         SessionManager session = new SessionManager(this);
         if (!session.isAdmin()) {
@@ -71,23 +69,20 @@ public class DaftarProdukActivity extends AppCompatActivity {
         recyclerProduk.setLayoutManager(new LinearLayoutManager(this));
         db = new DatabaseHelper(this);
 
-        // Init Adapter dengan List Display (Kosong dulu)
-        adapter = new ProdukAdapter(produkListDisplay, db);
+        // 🔥 PERBAIKAN 1: ADAPTER
+        // Adapter baru butuh (Context, List). Context (this) harus di urutan pertama.
+        adapter = new ProdukAdapter(this, produkListDisplay);
         recyclerProduk.setAdapter(adapter);
 
-        // =====================
-        // LOAD DATA
-        // =====================
+        // Load Data Awal
         loadData();
 
-        // =====================
-        // LISTENER
-        // =====================
+        // Listener Tambah
         fabTambah.setOnClickListener(v -> {
             startActivity(new Intent(DaftarProdukActivity.this, TambahProdukActivity.class));
         });
 
-        // 🔥 LOGIKA PENCARIAN (REAL-TIME)
+        // Listener Pencarian
         edtCari.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -108,30 +103,41 @@ public class DaftarProdukActivity extends AppCompatActivity {
         Cursor c = db.getAllProduk();
         if (c != null && c.getCount() > 0) {
             while (c.moveToNext()) {
+                // 🔥 PERBAIKAN 2: AMBIL FOTO DARI DB
+                String imageUrl = null;
+                try {
+                    // Cek apakah kolom image_url ada (biasanya index 5)
+                    int imageIndex = c.getColumnIndex(DatabaseHelper.COL_PRODUK_IMAGE);
+                    if (imageIndex != -1) {
+                        imageUrl = c.getString(imageIndex);
+                    }
+                } catch (Exception e) {
+                    imageUrl = null; // Aman jika kolom belum ada/error
+                }
+
+                // 🔥 PERBAIKAN 3: GUNAKAN CONSTRUCTOR 6 PARAMETER (Lengkap dengan Foto)
                 produkListMaster.add(new Produk(
                         c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_ID)),
                         c.getString(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_NAMA)),
                         c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_MODAL)),
                         c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_JUAL)),
-                        c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_STOK))
+                        c.getInt(c.getColumnIndexOrThrow(DatabaseHelper.COL_PRODUK_STOK)),
+                        imageUrl // Masukkan URL Foto ke sini
                 ));
             }
             c.close();
         }
 
-        // Setelah data diambil, tampilkan semua (reset filter)
-        filterData("");
+        // Tampilkan data
+        filterData(edtCari.getText().toString());
     }
 
-    // Fungsi Pintar untuk Mencari Barang
     private void filterData(String keyword) {
         produkListDisplay.clear();
 
         if (keyword.isEmpty()) {
-            // Jika pencarian kosong, tampilkan semua
             produkListDisplay.addAll(produkListMaster);
         } else {
-            // Jika ada ketikan, cari yang cocok
             String query = keyword.toLowerCase();
             for (Produk p : produkListMaster) {
                 if (p.getNama().toLowerCase().contains(query)) {
@@ -140,10 +146,8 @@ public class DaftarProdukActivity extends AppCompatActivity {
             }
         }
 
-        // Update UI
         adapter.notifyDataSetChanged();
 
-        // Cek apakah hasil pencarian kosong?
         if (produkListDisplay.isEmpty()) {
             layoutEmpty.setVisibility(View.VISIBLE);
             recyclerProduk.setVisibility(View.GONE);
@@ -156,7 +160,6 @@ public class DaftarProdukActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh data saat kembali dari halaman Tambah/Edit
         loadData();
     }
 }

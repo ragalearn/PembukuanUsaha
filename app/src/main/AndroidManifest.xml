@@ -39,6 +39,11 @@
         <activity android:name=".activity.ExportActivity" android:exported="false" />
         <activity android:name=".activity.BackupRestoreActivity" android:exported="false" />
 
+        <activity
+            android:name=".activity.TambahKaryawanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
     </application>
 
 </manifest>

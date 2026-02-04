@@ -3,59 +3,25 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bgMain"
+    android:background="#F5F5F5"
     android:fillViewport="true">
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
         <View
             android:layout_width="match_parent"
-            android:layout_height="220dp"
+            android:layout_height="80dp"
             android:background="@color/colorPrimary"/>
 
-        <LinearLayout
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="24dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="24dp">
-
-                <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_inventory"
-                    app:tint="@color/white"
-                    android:layout_marginEnd="16dp"/>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Produk Baru"
-                        android:textSize="22sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Lengkapi data barang daganganmu"
-                        android:textSize="14sp"
-                        android:textColor="#E8F5E9"/>
-                </LinearLayout>
-            </LinearLayout>
+            android:layout_marginTop="-40dp"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="24dp">
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
@@ -71,12 +37,50 @@
                     android:padding="24dp">
 
                     <TextView
+                        android:id="@+id/txtJudul"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Informasi Barang"
+                        android:text="Tambah Produk Baru"
+                        android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="@color/textTitle"
-                        android:layout_marginBottom="16dp"/>
+                        android:layout_marginBottom="24dp"/>
+
+                    <FrameLayout
+                        android:id="@+id/btnPilihFoto"
+                        android:layout_width="match_parent"
+                        android:layout_height="180dp"
+                        android:layout_marginBottom="24dp"
+                        android:background="@drawable/ic_launcher_background"
+                        android:backgroundTint="#EEEEEE"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:id="@+id/imgPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"/>
+
+                        <LinearLayout
+                            android:id="@+id/layoutPlaceholder"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@android:drawable/ic_menu_camera"
+                                app:tint="#BDBDBD"/>
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Ketuk untuk upload foto"
+                                android:textColor="#BDBDBD"/>
+                        </LinearLayout>
+                    </FrameLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
@@ -84,7 +88,6 @@
                         android:hint="Nama Produk"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_marginBottom="16dp">
-
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/edtNamaProduk"
                             android:layout_width="match_parent"
@@ -95,18 +98,15 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:baselineAligned="false"
-                        android:layout_marginBottom="16dp">
+                        android:orientation="horizontal">
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:hint="Modal (Beli)"
-                            android:layout_marginEnd="8dp"
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
+                            android:hint="Harga Modal"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_marginEnd="8dp">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/edtHargaModal"
                                 android:layout_width="match_parent"
@@ -119,9 +119,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:hint="Harga Jual"
-                            android:layout_marginStart="8dp"
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_marginStart="8dp">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/edtHargaJual"
                                 android:layout_width="match_parent"
@@ -133,11 +132,10 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Stok Awal (Pcs)"
-                        app:startIconDrawable="@drawable/ic_inventory"
+                        android:hint="Stok Awal"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_marginTop="16dp"
                         android:layout_marginBottom="24dp">
-
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/edtStok"
                             android:layout_width="match_parent"
@@ -145,19 +143,25 @@
                             android:inputType="number"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <ProgressBar
+                        android:id="@+id/progressBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:visibility="gone"/>
+
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSimpan"
                         android:layout_width="match_parent"
                         android:layout_height="60dp"
-                        android:text="SIMPAN KE DATA MASTER"
-                        android:textSize="16sp"
+                        android:text="SIMPAN PRODUK"
                         android:textStyle="bold"
-                        app:cornerRadius="12dp"
+                        android:textSize="16sp"
+                        app:cornerRadius="10dp"
                         android:backgroundTint="@color/colorPrimary"/>
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
-
-        </LinearLayout>
-    </RelativeLayout>
+        </RelativeLayout>
+    </LinearLayout>
 </ScrollView>

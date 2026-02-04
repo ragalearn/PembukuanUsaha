@@ -1,146 +1,181 @@
 package com.example.pembukuanusaha.activity;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.widget.EditText;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.pembukuanusaha.R;
+import com.bumptech.glide.Glide;
+import com.example.pembukuanusaha.R; // 🔥 PASTIKAN IMPORT INI ADA DAN BENAR
 import com.example.pembukuanusaha.database.DatabaseHelper;
+import com.example.pembukuanusaha.model.Produk;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 public class TambahProdukActivity extends AppCompatActivity {
 
-    // =====================
-    // VIEW
-    // =====================
-    EditText edtNama, edtModal, edtJual, edtStok;
+    // Views
+    TextView txtJudul;
+    TextInputEditText edtNama, edtModal, edtJual, edtStok;
     MaterialButton btnSimpan;
+    FrameLayout btnPilihFoto;
+    ImageView imgPreview;
+    LinearLayout layoutPlaceholder;
+    ProgressBar progressBar;
 
-    // =====================
-    // DATABASE
-    // =====================
+    // Data
     DatabaseHelper db;
+    Uri selectedImageUri;
+    Produk produkEdit;
+    boolean isEditMode = false;
+
+    // Firebase Storage
+    StorageReference storageRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_tambah_produk);
+        setContentView(R.layout.activity_tambah_produk); // XML Final
 
-        // =====================
-        // INIT VIEW (SESUAIKAN ID DENGAN XML BARU)
-        // =====================
-        // Perhatikan ID di sini berubah sesuai desain baru (edtNamaProduk, dll)
-        edtNama   = findViewById(R.id.edtNamaProduk);
-        edtModal  = findViewById(R.id.edtHargaModal);
-        edtJual   = findViewById(R.id.edtHargaJual);
-        edtStok   = findViewById(R.id.edtStok);
-        btnSimpan = findViewById(R.id.btnSimpan);
-
-        // =====================
-        // DATABASE
-        // =====================
+        // Init DB & Firebase
         db = new DatabaseHelper(this);
+        storageRef = FirebaseStorage.getInstance().getReference("produk_images");
 
-        btnSimpan.setOnClickListener(v -> simpanProduk());
+        // Init Views (ID ini sudah sinkron dengan XML Final)
+        txtJudul = findViewById(R.id.txtJudul);
+        edtNama = findViewById(R.id.edtNamaProduk);
+        edtModal = findViewById(R.id.edtHargaModal);
+        edtJual = findViewById(R.id.edtHargaJual);
+        edtStok = findViewById(R.id.edtStok);
+        btnSimpan = findViewById(R.id.btnSimpan);
+        btnPilihFoto = findViewById(R.id.btnPilihFoto);
+        imgPreview = findViewById(R.id.imgPreview);
+        layoutPlaceholder = findViewById(R.id.layoutPlaceholder);
+        progressBar = findViewById(R.id.progressBar);
+
+        // Mode Edit?
+        if (getIntent().hasExtra("extra_produk")) {
+            isEditMode = true;
+            produkEdit = (Produk) getIntent().getSerializableExtra("extra_produk");
+            setupEditMode();
+        }
+
+        // Listeners
+        btnPilihFoto.setOnClickListener(v -> openGallery());
+        btnSimpan.setOnClickListener(v -> validateAndSave());
     }
 
-    // ======================
-    // VALIDASI & SIMPAN PRODUK
-    // ======================
-    private void simpanProduk() {
+    private void setupEditMode() {
+        txtJudul.setText("Edit Produk");
+        btnSimpan.setText("UPDATE PRODUK");
 
-        String nama     = edtNama.getText().toString().trim();
+        edtNama.setText(produkEdit.getNama());
+        edtModal.setText(String.valueOf(produkEdit.getHargaModal()));
+        edtJual.setText(String.valueOf(produkEdit.getHargaJual()));
+        edtStok.setText(String.valueOf(produkEdit.getStok()));
+
+        if (produkEdit.getImageUrl() != null && !produkEdit.getImageUrl().isEmpty()) {
+            layoutPlaceholder.setVisibility(View.GONE);
+            Glide.with(this).load(produkEdit.getImageUrl()).into(imgPreview);
+        }
+    }
+
+    private void openGallery() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        galleryLauncher.launch(intent);
+    }
+
+    private final ActivityResultLauncher<Intent> galleryLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    selectedImageUri = result.getData().getData();
+                    imgPreview.setImageURI(selectedImageUri);
+                    layoutPlaceholder.setVisibility(View.GONE);
+                }
+            }
+    );
+
+    private void validateAndSave() {
+        String nama = edtNama.getText().toString().trim();
         String modalStr = edtModal.getText().toString().trim();
-        String jualStr  = edtJual.getText().toString().trim();
-        String stokStr  = edtStok.getText().toString().trim();
+        String jualStr = edtJual.getText().toString().trim();
+        String stokStr = edtStok.getText().toString().trim();
 
-        // === 1. VALIDASI INPUT KOSONG ===
-        if (TextUtils.isEmpty(nama)) {
-            edtNama.setError("Nama produk wajib diisi");
-            edtNama.requestFocus();
+        if (TextUtils.isEmpty(nama) || TextUtils.isEmpty(modalStr) ||
+                TextUtils.isEmpty(jualStr) || TextUtils.isEmpty(stokStr)) {
+            Toast.makeText(this, "Isi semua data!", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (TextUtils.isEmpty(modalStr)) {
-            edtModal.setError("Harga modal wajib diisi");
-            edtModal.requestFocus();
-            return;
-        }
+        int modal = Integer.parseInt(modalStr);
+        int jual = Integer.parseInt(jualStr);
+        int stok = Integer.parseInt(stokStr);
 
-        if (TextUtils.isEmpty(jualStr)) {
-            edtJual.setError("Harga jual wajib diisi");
-            edtJual.requestFocus();
-            return;
-        }
-
-        if (TextUtils.isEmpty(stokStr)) {
-            edtStok.setError("Stok wajib diisi");
-            edtStok.requestFocus();
-            return;
-        }
-
-        // === 2. VALIDASI ANGKA & LOGIKA BISNIS ===
-        int modal, jual, stok;
-
-        try {
-            modal = Integer.parseInt(modalStr);
-            jual  = Integer.parseInt(jualStr);
-            stok  = Integer.parseInt(stokStr);
-        } catch (NumberFormatException e) {
-            showError("Pastikan harga dan stok berupa angka valid");
-            return;
-        }
-
-        if (modal <= 0) {
-            edtModal.setError("Harga modal harus lebih dari 0");
-            return;
-        }
-
-        if (jual <= 0) {
-            edtJual.setError("Harga jual harus lebih dari 0");
-            return;
-        }
-
-        // 🔥 Fitur Cerdas: Cek Anti Rugi
         if (jual < modal) {
-            edtJual.setError("Awas Rugi! Harga jual lebih kecil dari modal");
-            edtJual.requestFocus();
+            edtJual.setError("Rugi dong! Harga jual harus lebih besar dari modal");
             return;
         }
 
-        if (stok < 0) {
-            edtStok.setError("Stok tidak boleh negatif");
-            return;
+        progressBar.setVisibility(View.VISIBLE);
+        btnSimpan.setEnabled(false);
+
+        if (selectedImageUri != null) {
+            uploadImageAndSave(nama, modal, jual, stok);
+        } else {
+            String imageUrl = isEditMode ? produkEdit.getImageUrl() : null;
+            saveToDatabase(nama, modal, jual, stok, imageUrl);
+        }
+    }
+
+    private void uploadImageAndSave(String nama, int modal, int jual, int stok) {
+        String fileName = "produk_" + System.currentTimeMillis() + ".jpg";
+        StorageReference fileRef = storageRef.child(fileName);
+
+        fileRef.putFile(selectedImageUri)
+                .addOnSuccessListener(taskSnapshot -> fileRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                    String downloadUrl = uri.toString();
+                    saveToDatabase(nama, modal, jual, stok, downloadUrl);
+                }))
+                .addOnFailureListener(e -> {
+                    progressBar.setVisibility(View.GONE);
+                    btnSimpan.setEnabled(true);
+                    Toast.makeText(this, "Gagal upload foto: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void saveToDatabase(String nama, int modal, int jual, int stok, String imageUrl) {
+        boolean success;
+
+        if (isEditMode) {
+            success = db.updateProduk(produkEdit.getId(), nama, modal, jual, stok, imageUrl);
+        } else {
+            success = db.insertProduk(nama, modal, jual, stok, imageUrl);
         }
 
-        // === 3. SIMPAN KE DATABASE ===
-        // Menggunakan method insertProduk milikmu
-        boolean success = db.insertProduk(nama, modal, jual, stok);
+        progressBar.setVisibility(View.GONE);
+        btnSimpan.setEnabled(true);
 
         if (success) {
-            Snackbar.make(
-                    findViewById(android.R.id.content),
-                    "Produk berhasil disimpan ke Gudang! 📦",
-                    Snackbar.LENGTH_SHORT
-            ).setBackgroundTint(getColor(R.color.colorPrimary)).show(); // Warna snackbar hijau
-
-            finish(); // Kembali ke daftar produk
+            Toast.makeText(this, isEditMode ? "Produk Diupdate!" : "Produk Disimpan!", Toast.LENGTH_SHORT).show();
+            finish();
         } else {
-            showError("Gagal menyimpan produk. Coba nama lain.");
+            Toast.makeText(this, "Gagal menyimpan ke database", Toast.LENGTH_SHORT).show();
         }
-    }
-
-    // ======================
-    // SNACKBAR ERROR
-    // ======================
-    private void showError(String message) {
-        Snackbar.make(
-                findViewById(android.R.id.content),
-                message,
-                Snackbar.LENGTH_LONG
-        ).setBackgroundTint(getColor(R.color.red_error)).show(); // Warna snackbar merah
     }
 }

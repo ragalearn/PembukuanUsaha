@@ -9,11 +9,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "pembukuan.db";
-    private static final int DATABASE_VERSION = 4; // Versi naik karena ada Tabel Pengeluaran
+    // 🔥 VERSI NAIK JADI 5 (Karena ada kolom Foto Produk)
+    private static final int DATABASE_VERSION = 5;
 
-    // ======================
-    // TABEL TRANSAKSI (PEMASUKAN)
-    // ======================
+    // TABEL TRANSAKSI
     public static final String TABLE_TRANSAKSI = "transaksi";
     public static final String COL_ID = "id";
     public static final String COL_NAMA = "nama_produk";
@@ -24,19 +23,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COL_TANGGAL = "tanggal";
     public static final String COL_SYNC = "status_sync";
 
-    // ======================
     // TABEL PRODUK
-    // ======================
     public static final String TABLE_PRODUK = "produk";
     public static final String COL_PRODUK_ID = "id";
     public static final String COL_PRODUK_NAMA = "nama";
     public static final String COL_PRODUK_MODAL = "harga_modal";
     public static final String COL_PRODUK_JUAL = "harga_jual";
     public static final String COL_PRODUK_STOK = "stok";
+    // 🔥 KOLOM BARU FOTO
+    public static final String COL_PRODUK_IMAGE = "image_url";
 
-    // ======================
-    // TABEL PENGELUARAN (BARU)
-    // ======================
+    // TABEL PENGELUARAN
     public static final String TABLE_PENGELUARAN = "pengeluaran";
     public static final String COL_OUT_ID = "id";
     public static final String COL_OUT_NAMA = "nama_pengeluaran";
@@ -61,19 +58,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COL_TANGGAL + " TEXT, " +
                 COL_SYNC + " INTEGER DEFAULT 0)");
 
-        // Tabel Produk
+        // Tabel Produk (Updated dengan IMAGE_URL)
         db.execSQL("CREATE TABLE " + TABLE_PRODUK + " (" +
                 COL_PRODUK_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 COL_PRODUK_NAMA + " TEXT, " +
                 COL_PRODUK_MODAL + " INTEGER, " +
                 COL_PRODUK_JUAL + " INTEGER, " +
-                COL_PRODUK_STOK + " INTEGER)");
+                COL_PRODUK_STOK + " INTEGER, " +
+                COL_PRODUK_IMAGE + " TEXT)");
 
         // Tabel Pengeluaran
-        createTablePengeluaran(db);
-    }
-
-    private void createTablePengeluaran(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE " + TABLE_PENGELUARAN + " (" +
                 COL_OUT_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 COL_OUT_NAMA + " TEXT, " +
@@ -84,9 +78,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion < 4) {
-            createTablePengeluaran(db);
-        }
+        // Reset tabel jika versi berubah (Cara aman untuk dev)
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PRODUK);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_TRANSAKSI);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PENGELUARAN);
+        onCreate(db);
     }
 
     // ======================
@@ -113,22 +109,36 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // ======================
-    // PRODUK (YANG TADI ERROR)
+    // PRODUK (UPDATED FOTO)
     // ======================
-    public boolean insertProduk(String nama, int modal, int jual, int stok) {
+    // 🔥 Method insertProduk baru menerima parameter imageUrl
+    public boolean insertProduk(String nama, int modal, int jual, int stok, String imageUrl) {
         ContentValues cv = new ContentValues();
         cv.put(COL_PRODUK_NAMA, nama);
         cv.put(COL_PRODUK_MODAL, modal);
         cv.put(COL_PRODUK_JUAL, jual);
         cv.put(COL_PRODUK_STOK, stok);
+        cv.put(COL_PRODUK_IMAGE, imageUrl); // Simpan URL
         return getWritableDatabase().insert(TABLE_PRODUK, null, cv) != -1;
+    }
+
+    // 🔥 Update Produk (Untuk Fitur Edit)
+    public boolean updateProduk(int id, String nama, int modal, int jual, int stok, String imageUrl) {
+        ContentValues cv = new ContentValues();
+        cv.put(COL_PRODUK_NAMA, nama);
+        cv.put(COL_PRODUK_MODAL, modal);
+        cv.put(COL_PRODUK_JUAL, jual);
+        cv.put(COL_PRODUK_STOK, stok);
+        if (imageUrl != null) { // Update foto hanya jika ada foto baru
+            cv.put(COL_PRODUK_IMAGE, imageUrl);
+        }
+        return getWritableDatabase().update(TABLE_PRODUK, cv, COL_PRODUK_ID + "=?", new String[]{String.valueOf(id)}) > 0;
     }
 
     public Cursor getAllProduk() {
         return getReadableDatabase().rawQuery("SELECT * FROM " + TABLE_PRODUK, null);
     }
 
-    // 🔥 INI YANG KEMARIN HILANG (deleteProduk)
     public boolean deleteProduk(int id) {
         return getWritableDatabase().delete(TABLE_PRODUK, COL_PRODUK_ID + "=?", new String[]{String.valueOf(id)}) > 0;
     }
@@ -139,7 +149,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         getWritableDatabase().update(TABLE_PRODUK, cv, COL_PRODUK_ID + "=?", new String[]{String.valueOf(id)});
     }
 
-    // Fitur: Deteksi Stok Menipis (Ayo Belanja)
     public Cursor getProdukHampirHabis() {
         return getReadableDatabase().rawQuery(
                 "SELECT * FROM " + TABLE_PRODUK + " WHERE " + COL_PRODUK_STOK + " <= 5 ORDER BY " + COL_PRODUK_STOK + " ASC",
@@ -166,9 +175,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return getReadableDatabase().rawQuery("SELECT * FROM " + TABLE_TRANSAKSI + " ORDER BY " + COL_TANGGAL + " DESC", null);
     }
 
-    // ======================
-    // DASHBOARD & CHART
-    // ======================
     public int getTotalOmzet() {
         Cursor c = getReadableDatabase().rawQuery("SELECT SUM(" + COL_HARGA_JUAL + " * " + COL_JUMLAH + ") FROM " + TABLE_TRANSAKSI, null);
         int total = (c.moveToFirst()) ? c.getInt(0) : 0;

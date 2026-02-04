@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.pembukuanusaha.R;
+import com.example.pembukuanusaha.session.SessionManager; // 🔥 PENTING: Import SessionManager
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -28,6 +29,7 @@ public class RegisterActivity extends AppCompatActivity {
 
     FirebaseAuth auth;
     FirebaseFirestore firestore;
+    SessionManager sessionManager; // 🔥 Tambahkan variabel SessionManager
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +39,9 @@ public class RegisterActivity extends AppCompatActivity {
         // Init Firebase
         auth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
+
+        // Init SessionManager
+        sessionManager = new SessionManager(this); // 🔥 Inisialisasi Sesi
 
         // Init View
         edtNama = findViewById(R.id.edtNama);
@@ -94,18 +99,26 @@ public class RegisterActivity extends AppCompatActivity {
 
     private void simpanDataUserKeFirestore(String uid, String nama, String email) {
         // Data User Baru (Default jadi ADMIN)
+        String usahaId = "usaha_" + uid.substring(0, 5); // ID Usaha Unik
+        String role = "admin";
+        String cabangId = "pusat";
+
         Map<String, Object> userData = new HashMap<>();
         userData.put("nama", nama);
         userData.put("email", email);
-        userData.put("role", "admin"); // Default Admin
-        userData.put("usaha_id", "usaha_" + uid.substring(0, 5)); // ID Usaha Unik
-        userData.put("cabang_id", "pusat");
+        userData.put("role", role);
+        userData.put("usaha_id", usahaId);
+        userData.put("cabang_id", cabangId);
         userData.put("created_at", System.currentTimeMillis());
 
         // 2. Simpan ke Firestore (Koleksi 'users')
         firestore.collection("users").document(uid)
                 .set(userData)
                 .addOnSuccessListener(aVoid -> {
+                    // 🔥 PERBAIKAN UTAMA DI SINI:
+                    // Simpan sesi login sebelum pindah halaman agar status ADMIN terbaca
+                    sessionManager.createLoginSession(uid, email, role, usahaId, cabangId);
+
                     progressBar.setVisibility(View.GONE);
                     Toast.makeText(RegisterActivity.this, "Registrasi Berhasil!", Toast.LENGTH_SHORT).show();
 

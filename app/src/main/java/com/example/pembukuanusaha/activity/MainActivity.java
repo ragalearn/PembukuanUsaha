@@ -3,12 +3,13 @@ package com.example.pembukuanusaha.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView; // PENTING: Import CardView
+import androidx.cardview.widget.CardView;
 
 import com.example.pembukuanusaha.R;
 import com.example.pembukuanusaha.database.DatabaseHelper;
@@ -28,9 +29,10 @@ public class MainActivity extends AppCompatActivity {
     TextView txtGreeting, txtTanggal, txtOmzet, txtLaba;
     ImageView btnKeluar;
 
-    // UBAH TIPE VARIABEL DARI MaterialButton KE CardView
+    // Menu Buttons
     CardView btnTambahTransaksi, btnPengeluaran, btnLihatTransaksi, btnProduk,
-            btnAyoBelanja, btnInsight, btnGrafik, btnExport, btnBackupRestore;
+            btnAyoBelanja, btnInsight, btnGrafik, btnExport, btnBackupRestore,
+            btnTambahKaryawan;
 
     DatabaseHelper db;
     SessionManager session;
@@ -51,14 +53,14 @@ public class MainActivity extends AppCompatActivity {
         session = new SessionManager(this);
         db = new DatabaseHelper(this);
 
-        // Init View
+        // Init View Header
         txtGreeting = findViewById(R.id.txtGreeting);
         txtTanggal  = findViewById(R.id.txtTanggal);
         txtOmzet    = findViewById(R.id.txtOmzet);
         txtLaba     = findViewById(R.id.txtLaba);
         btnKeluar   = findViewById(R.id.btnKeluar);
 
-        // Init Tombol (Sekarang CardView)
+        // Init Tombol Menu (CardView)
         btnTambahTransaksi = findViewById(R.id.btnTambahTransaksi);
         btnPengeluaran     = findViewById(R.id.btnPengeluaran);
         btnLihatTransaksi  = findViewById(R.id.btnLihatTransaksi);
@@ -68,44 +70,50 @@ public class MainActivity extends AppCompatActivity {
         btnGrafik          = findViewById(R.id.btnGrafik);
         btnExport          = findViewById(R.id.btnExport);
         btnBackupRestore   = findViewById(R.id.btnBackupRestore);
+        btnTambahKaryawan  = findViewById(R.id.btnTambahKaryawan);
 
         setGreetingAndDate();
         updateDashboard();
 
-        // 🔐 ROLE PROTECTION
+        // 🔐 ROLE PROTECTION (Hanya Admin yang bisa lihat menu sensitif)
         if (!session.isAdmin()) {
-            if (btnProduk != null) btnProduk.setVisibility(View.GONE);
-            if (btnAyoBelanja != null) btnAyoBelanja.setVisibility(View.GONE);
-            if (btnBackupRestore != null) btnBackupRestore.setVisibility(View.GONE);
+            // 🔥 SOLUSI RAPI: Hapus tombol dari layout (bukan cuma GONE)
+            // Agar tombol di bawahnya naik ke atas mengisi celah kosong
+            removeButton(btnProduk);
+            removeButton(btnAyoBelanja);
+            removeButton(btnBackupRestore);
+            removeButton(btnTambahKaryawan);
         }
 
         setupButtons();
         animateDashboard();
     }
 
+    // 🔥 METHOD BARU: Menghapus Tombol Sampai ke Akarnya agar Layout Rapi
+    private void removeButton(View view) {
+        if (view != null && view.getParent() instanceof ViewGroup) {
+            ((ViewGroup) view.getParent()).removeView(view);
+        }
+    }
+
     private void setupButtons() {
+        // Menu Umum (Semua Bisa Akses)
         btnTambahTransaksi.setOnClickListener(v -> startActivity(new Intent(this, TambahTransaksiActivity.class)));
         btnPengeluaran.setOnClickListener(v -> startActivity(new Intent(this, TambahPengeluaranActivity.class)));
         btnLihatTransaksi.setOnClickListener(v -> startActivity(new Intent(this, DaftarTransaksiActivity.class)));
-
-        btnProduk.setOnClickListener(v -> {
-            if (session.isAdmin()) startActivity(new Intent(this, DaftarProdukActivity.class));
-            else showAccessDenied(v);
-        });
-
-        btnAyoBelanja.setOnClickListener(v -> {
-            if (session.isAdmin()) startActivity(new Intent(this, AyoBelanjaActivity.class));
-            else showAccessDenied(v);
-        });
-
         btnInsight.setOnClickListener(v -> startActivity(new Intent(this, InsightActivity.class)));
         btnGrafik.setOnClickListener(v -> startActivity(new Intent(this, GrafikActivity.class)));
         btnExport.setOnClickListener(v -> startActivity(new Intent(this, ExportActivity.class)));
 
-        btnBackupRestore.setOnClickListener(v -> {
-            if (session.isAdmin()) startActivity(new Intent(this, BackupRestoreActivity.class));
-            else showAccessDenied(v);
-        });
+        // Menu Admin (Listener tetap dipasang, tapi tombolnya sudah dihapus di atas jika bukan admin)
+        if (session.isAdmin()) {
+            btnProduk.setOnClickListener(v -> startActivity(new Intent(this, DaftarProdukActivity.class)));
+            btnAyoBelanja.setOnClickListener(v -> startActivity(new Intent(this, AyoBelanjaActivity.class)));
+            btnBackupRestore.setOnClickListener(v -> startActivity(new Intent(this, BackupRestoreActivity.class)));
+            if (btnTambahKaryawan != null) {
+                btnTambahKaryawan.setOnClickListener(v -> startActivity(new Intent(this, TambahKaryawanActivity.class)));
+            }
+        }
 
         btnKeluar.setOnClickListener(v -> {
             new AlertDialog.Builder(this)
@@ -157,14 +165,17 @@ public class MainActivity extends AppCompatActivity {
         txtGreeting.animate().alpha(1f).setDuration(600).start();
         txtTanggal.animate().alpha(1f).setStartDelay(200).setDuration(600).start();
 
+        // Animasi hanya untuk tombol yang masih ada (tidak null & terlihat)
         View[] buttons = {
                 btnTambahTransaksi, btnPengeluaran, btnLihatTransaksi, btnProduk,
-                btnAyoBelanja, btnInsight, btnGrafik, btnExport, btnBackupRestore
+                btnAyoBelanja, btnInsight, btnGrafik, btnExport, btnBackupRestore,
+                btnTambahKaryawan
         };
 
         int delay = 300;
         for (View btn : buttons) {
-            if (btn == null || btn.getVisibility() != View.VISIBLE) continue;
+            // Cek apakah tombol masih ada di layar (belum dihapus/null)
+            if (btn == null || btn.getParent() == null) continue;
 
             btn.setScaleX(0.9f);
             btn.setScaleY(0.9f);

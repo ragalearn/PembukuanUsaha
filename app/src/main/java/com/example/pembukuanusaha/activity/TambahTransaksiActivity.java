@@ -25,15 +25,15 @@ import java.util.Locale;
 
 public class TambahTransaksiActivity extends AppCompatActivity {
 
-    // VIEW (Sesuai ID di XML Baru)
+    // VIEW
     Spinner spinnerProduk;
-    EditText edtJumlah, edtTanggal; // Tambahan edtTanggal untuk DatePicker
-    MaterialButton btnSimpan;       // Dulu btnHitung, sekarang btnSimpan agar konsisten
+    EditText edtJumlah, edtTanggal;
+    MaterialButton btnSimpan;
 
     // DATA
     DatabaseHelper db;
     List<Produk> produkList = new ArrayList<>();
-    Calendar calendar = Calendar.getInstance(); // Untuk Kalender
+    Calendar calendar = Calendar.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,16 +70,26 @@ public class TambahTransaksiActivity extends AppCompatActivity {
         Cursor c = db.getAllProduk();
         if (c != null) {
             while (c.moveToNext()) {
-                // Pastikan urutan kolom sesuai DB kamu: ID, Nama, Modal, Jual, Stok
+                // 🔥 PERBAIKAN: Ambil URL Foto (Kolom ke-5)
+                String imageUrl = null;
+                try {
+                    imageUrl = c.getString(5); // Ambil URL gambar jika ada
+                } catch (Exception e) {
+                    imageUrl = null;
+                }
+
+                // 🔥 PERBAIKAN: Gunakan Constructor 6 Parameter
                 Produk p = new Produk(
-                        c.getInt(0),
-                        c.getString(1),
-                        c.getInt(2),
-                        c.getInt(3),
-                        c.getInt(4)
+                        c.getInt(0),      // ID
+                        c.getString(1),   // Nama
+                        c.getInt(2),      // Modal
+                        c.getInt(3),      // Jual
+                        c.getInt(4),      // Stok
+                        imageUrl          // Foto (Image URL) -> INI YANG TADI KURANG
                 );
+
                 produkList.add(p);
-                // Menampilkan stok di spinner (Fitur lama kamu yang bagus)
+                // Menampilkan nama & sisa stok di spinner
                 namaProduk.add(p.getNama() + " (Sisa: " + p.getStok() + ")");
             }
             c.close();
@@ -133,7 +143,7 @@ public class TambahTransaksiActivity extends AppCompatActivity {
         if (produkList.isEmpty()) return;
         Produk produk = produkList.get(spinnerProduk.getSelectedItemPosition());
 
-        // === CEK STOK (Logika Lamamu) ===
+        // === CEK STOK ===
         if (jumlah > produk.getStok()) {
             Snackbar.make(btnSimpan, "Stok tidak cukup! Sisa: " + produk.getStok(), Snackbar.LENGTH_LONG)
                     .setBackgroundTint(getResources().getColor(android.R.color.holo_red_dark))
@@ -141,26 +151,25 @@ public class TambahTransaksiActivity extends AppCompatActivity {
             return;
         }
 
-        // === HITUNG LABA (Logika Lamamu) ===
+        // === HITUNG LABA ===
         int hargaJual  = produk.getHargaJual();
         int hargaModal = produk.getHargaModal();
         int laba       = (hargaJual - hargaModal) * jumlah;
 
         // === SIMPAN KE DATABASE ===
-        // Menggunakan method insertTransaksi milikmu
         boolean sukses = db.insertTransaksi(produk.getNama(), hargaJual, hargaModal, jumlah, laba, tanggal);
 
         if (sukses) {
-            // 🔥 UPDATE STOK (Logika Lamamu: Kurangi stok manual)
+            // Update Stok
             int stokBaru = produk.getStok() - jumlah;
             db.updateStokProduk(produk.getId(), stokBaru);
 
-            // Feedback Sukses (Hijau)
+            // Feedback Sukses
             Snackbar.make(btnSimpan, "Transaksi Sukses! Laba: Rp " + laba, Snackbar.LENGTH_LONG)
                     .setBackgroundTint(getResources().getColor(R.color.colorPrimary))
                     .show();
 
-            // Delay sedikit biar user lihat pesan sukses sebelum tutup
+            // Delay sedikit sebelum tutup
             btnSimpan.postDelayed(this::finish, 1500);
         } else {
             Toast.makeText(this, "Gagal menyimpan transaksi", Toast.LENGTH_SHORT).show();

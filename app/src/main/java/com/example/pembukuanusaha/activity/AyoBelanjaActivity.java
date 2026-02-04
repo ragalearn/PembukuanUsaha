@@ -15,8 +15,8 @@ import com.example.pembukuanusaha.R;
 import com.example.pembukuanusaha.database.DatabaseHelper;
 import com.example.pembukuanusaha.model.Produk;
 import com.example.pembukuanusaha.session.SessionManager;
-import com.example.pembukuanusaha.utils.RupiahFormatter; // Pakai formatter biar rapi
-import com.google.android.material.button.MaterialButton; // Update ke MaterialButton
+import com.example.pembukuanusaha.utils.RupiahFormatter;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,7 @@ public class AyoBelanjaActivity extends AppCompatActivity {
 
     Spinner spinnerProduk;
     EditText edtJumlah;
-    MaterialButton btnHitung; // Tipe baru
+    MaterialButton btnHitung;
     TextView txtHasil;
 
     DatabaseHelper db;
@@ -69,13 +69,29 @@ public class AyoBelanjaActivity extends AppCompatActivity {
         Cursor c = db.getAllProduk();
         if (c != null) {
             while (c.moveToNext()) {
+                // Ambil data dari cursor
+                // Pastikan urutan index sesuai dengan DatabaseHelper Anda:
+                // 0: id, 1: nama, 2: modal, 3: jual, 4: stok, 5: image_url (jika ada di query SELECT *)
+
+                String imageUrl = null;
+                // Cek jika kolom ke-5 (image_url) ada datanya
+                try {
+                    // Jika query SELECT * FROM produk, dan image_url adalah kolom terakhir (index 5)
+                    imageUrl = c.getString(5);
+                } catch (Exception e) {
+                    imageUrl = null; // Jika error/kolom belum ada, set null aman
+                }
+
+                // 🔥 UPDATE: MENGGUNAKAN CONSTRUCTOR 6 PARAMETER
                 Produk p = new Produk(
-                        c.getInt(0),
-                        c.getString(1),
-                        c.getInt(2),
-                        c.getInt(3),
-                        c.getInt(4)
+                        c.getInt(0),      // ID
+                        c.getString(1),   // Nama
+                        c.getInt(2),      // Modal
+                        c.getInt(3),      // Jual
+                        c.getInt(4),      // Stok
+                        imageUrl          // Foto (Image URL)
                 );
+
                 produkList.add(p);
                 // Tampilkan nama + harga modal di spinner
                 namaProduk.add(p.getNama() + " (@" + RupiahFormatter.format(p.getHargaModal()) + ")");
@@ -85,7 +101,6 @@ public class AyoBelanjaActivity extends AppCompatActivity {
 
         if (produkList.isEmpty()) {
             Toast.makeText(this, "Belum ada produk di database", Toast.LENGTH_LONG).show();
-            // Opsional: Matikan tombol jika kosong
             btnHitung.setEnabled(false);
             return;
         }

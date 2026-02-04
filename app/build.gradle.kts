@@ -34,7 +34,6 @@ android {
 }
 
 dependencies {
-
     // ===== ANDROIDX UI =====
     implementation(libs.appcompat)
     implementation(libs.material)
@@ -57,6 +56,12 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+
+    // 🔥 BARU: FIREBASE STORAGE (Untuk Simpan Foto)
+    implementation("com.google.firebase:firebase-storage")
+
+    // 🔥 BARU: GLIDE (Untuk Tampilkan Foto)
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 
     // ===== TESTING =====
     testImplementation(libs.junit)
