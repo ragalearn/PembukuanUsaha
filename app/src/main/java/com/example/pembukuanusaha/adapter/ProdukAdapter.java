@@ -4,6 +4,9 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -50,33 +53,44 @@ public class ProdukAdapter extends RecyclerView.Adapter<ProdukAdapter.ViewHolder
         holder.txtStok.setText("Stok: " + p.getStok());
         holder.txtHarga.setText(RupiahFormatter.format(p.getHargaJual()));
 
-        // 🔥 1. LOAD FOTO DENGAN GLIDE
-        // Jika ada URL foto, load pakai Glide. Jika tidak, pakai icon default.
+        // 🔥 LOGIKA BARU: Decode Base64 ke Gambar
         if (p.getImageUrl() != null && !p.getImageUrl().isEmpty()) {
-            Glide.with(context)
-                    .load(p.getImageUrl())
-                    .centerCrop()
-                    .placeholder(R.drawable.ic_inventory) // Gambar loading/default
-                    .into(holder.imgProduk);
+            try {
+                // 1. Coba baca sebagai Base64 (Data Lokal)
+                byte[] decodedString = Base64.decode(p.getImageUrl(), Base64.DEFAULT);
+                Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+
+                // Tampilkan pakai Glide biar mulus
+                Glide.with(context)
+                        .load(decodedByte)
+                        .centerCrop()
+                        .placeholder(R.drawable.ic_inventory)
+                        .into(holder.imgProduk);
+
+            } catch (Exception e) {
+                // 2. Jika gagal (mungkin data lama URL internet), load biasa
+                Glide.with(context)
+                        .load(p.getImageUrl())
+                        .centerCrop()
+                        .placeholder(R.drawable.ic_inventory)
+                        .into(holder.imgProduk);
+            }
         } else {
             holder.imgProduk.setImageResource(R.drawable.ic_inventory);
         }
 
-        // 🔥 2. TOMBOL OPSI (TITIK TIGA)
+        // TOMBOL OPSI (SAMA SEPERTI SEBELUMNYA)
         holder.btnMoreOptions.setOnClickListener(v -> {
             PopupMenu popup = new PopupMenu(context, holder.btnMoreOptions);
-            // Tambahkan menu secara manual lewat kode (biar gak ribet bikin XML menu lagi)
             popup.getMenu().add(0, 1, 0, "Edit");
             popup.getMenu().add(0, 2, 0, "Hapus");
 
             popup.setOnMenuItemClickListener(item -> {
                 if (item.getItemId() == 1) {
-                    // --- AKSI EDIT ---
                     Intent intent = new Intent(context, TambahProdukActivity.class);
-                    intent.putExtra("extra_produk", p); // Kirim objek produk ke halaman edit
+                    intent.putExtra("extra_produk", p);
                     context.startActivity(intent);
                 } else if (item.getItemId() == 2) {
-                    // --- AKSI HAPUS ---
                     confirmDelete(p, position);
                 }
                 return true;
